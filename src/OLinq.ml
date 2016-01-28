@@ -209,6 +209,11 @@ type ('a,'b) group_join_descr = {
   gjoin_build : 'a PMap.build_method;
 }
 
+type ('a,'b) search_descr = {
+  search_check: ('a -> 'b search_result);
+  search_failure : 'b;
+}
+
 module ImplemSetOps = struct
   let choose s = Sequence.take 1 s
 
@@ -217,11 +222,11 @@ module ImplemSetOps = struct
   let search obj s =
     match
       Sequence.find
-        (fun x -> match obj#check x with
+        (fun x -> match obj.search_check x with
            | SearchContinue -> None
-           | SearchStop y -> Some y
-        ) s
-    with None -> obj#failure
+           | SearchStop y -> Some y)
+        s
+    with None -> obj.search_failure
        | Some x -> x
 
   let do_join ~join c1 c2 =
@@ -297,7 +302,7 @@ end
 (** {2 Query operators} *)
 
 type (_, _) unary =
-  | Map : ('a -> 'b) -> ('a, 'b ) unary
+  | Map : ('a -> 'b) -> ('a, 'b) unary
   | Filter : ('a -> bool) -> ('a, 'a ) unary
   | Fold : ('b -> 'a -> 'b) * 'b -> ('a, 'b) unary
   | Reduce : ('a -> 'b) * ('a -> 'b -> 'b) * ('b -> 'c)
@@ -311,10 +316,7 @@ type (_, _) unary =
   | Sort : 'a ord -> ('a, 'a) unary
   | SortBy : 'b ord * ('a -> 'b) -> ('a, 'a) unary
   | Distinct : 'a ord -> ('a, 'a) unary
-  | Search :
-      < check: ('a -> 'b search_result);
-        failure : 'b;
-      > -> ('a, 'b) unary
+  | Search : ('a, 'b) search_descr -> ('a, 'b) unary
   | Contains : 'a equal * 'a -> ('a, bool) unary
   | GroupBy : 'b PMap.build_method * ('a -> 'b)
     -> ('a, ('b,'a list) PMap.t) unary
@@ -610,39 +612,45 @@ let min q = Unary (Reduce (id_, Pervasives.min, id_), q)
 let average q = Unary (Reduce (_avg_start, _avg_mix, _avg_stop), q)
 
 let is_empty q =
-  Unary (Search (object
-           method check _ = SearchStop false (* stop in case there is an element *)
-           method failure = true
-         end), q)
+  Unary
+    (Search {
+      search_check = (fun _ -> SearchStop false); (* stop in case there is an element *)
+      search_failure = true;
+    }, q)
 
 let contains ?(eq=(=)) x q =
   Unary (Contains (eq, x), q)
 
 let for_all p q =
-  Unary (Search (object
-           method check x = if p x then SearchContinue else SearchStop false
-           method failure = true
-         end), q)
+  Unary
+    (Search {
+      search_check = (fun x -> if p x then SearchContinue else SearchStop false);
+      search_failure = true;
+    }, q)
 
 let exists p q =
-  Unary (Search (object
-           method check x = if p x then SearchStop true else SearchContinue
-           method failure = false
-         end), q)
+  Unary
+    (Search {
+      search_check = (fun x-> if p x then SearchStop true else SearchContinue);
+      search_failure = false;
+    }, q)
 
 let find p q =
-  Unary (Search (object
-           method check x = if p x then SearchStop (Some x) else SearchContinue
-           method failure = None
-         end), q)
+  Unary
+    (Search {
+      search_check = (fun x -> if p x then SearchStop (Some x) else SearchContinue);
+      search_failure = None;
+    }, q)
 
 let find_map f q =
-  Unary (Search (object
-           method check x = match f x with
-             | Some y -> SearchStop (Some y)
-             | None -> SearchContinue
-           method failure = None
-         end), q)
+  Unary
+    (Search {
+      search_check =
+        (fun x -> match f x with
+          | Some y -> SearchStop (Some y)
+          | None -> SearchContinue);
+      search_failure = None;
+    }, q)
 
 (** {6 Binary Operators} *)
 
