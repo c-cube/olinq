@@ -14,15 +14,15 @@
 
       OLinq.(
         of_list [1;2;3]
-        |> flat_map (fun x -> Sequence.(x -- (x+10)))
-        |> sort ()
+        |> flat_map (fun x -> (x -- (x+10)))
         |> count ()
-        |> flat_map PMap.to_seq
-        |> List.run
+        |> flat_map of_pmap
+        |> sort ()
+        |> run_list
       );;
-      - : (int * int) list = [(13, 1); (12, 2); (11, 3); (10, 3); (9, 3);
-                              (8, 3); (7, 3); (6, 3); (5, 3); (4, 3); (3, 3); (2, 2); (1, 1)]
 
+      - : (int * int) list = [(1, 1); (2, 2); (3, 3); (4, 3); (5, 3); (6, 3);
+                              (7, 3); (8, 3); (9, 3); (10, 3); (11, 3); (12, 2); (13, 1)]
 
         OLinq.(
           IO.read_file "/tmp/foo"
@@ -35,8 +35,6 @@
 
 *)
 
-(* TODO: add phantom type for cardinality: 1, {0,1}, any *)
-(* TODO: add more run helpers, in particular for cardinality 1 *)
 (* TODO: monad adapter, as a functor, with (among others)  'a M.t t -> 'a t M.t *)
 
 type 'a sequence = ('a -> unit) -> unit
@@ -100,8 +98,8 @@ type ('a, 'card) t constraint 'card = [<`One | `AtMostOne | `Any]
     to least precise (`Any):  `One < `AtMostOne < `Any. *)
 
 type 'a t_any = ('a, [`Any]) t
-type 'a t_one= ('a, [`One]) t
-type 'a t_at_most_one= ('a, [`AtMostOne]) t
+type 'a t_one = ('a, [`One]) t
+type 'a t_at_most_one = ('a, [`AtMostOne]) t
 
 (** {2 Initial values} *)
 
@@ -134,6 +132,9 @@ val of_stack : 'a Stack.t -> ('a, [`Any]) t
 
 val of_string : string -> (char, [`Any]) t
 (** Traverse the characters of the string *)
+
+val of_pmap : ('a, 'b) PMap.t -> ('a * 'b, [`Any]) t
+(** [of_pmap m] yields each binding of [m] *)
 
 (** {6 Execution} *)
 
@@ -177,7 +178,6 @@ val filter_map : ('a -> 'b option) -> ('a, _) t -> ('b, [`Any]) t
 
 val flat_map_seq : ('a -> 'b sequence) -> ('a, _) t -> ('b, [`Any]) t
 (** Same as {!flat_map} but using sequences *)
-(* TODO rename flat_map_seq *)
 
 val flat_map_l : ('a -> 'b list) -> ('a, _) t -> ('b, [`Any]) t
 (** map each element to a collection and flatten the result *)
@@ -198,6 +198,10 @@ val take_while : ('a -> bool) -> ('a, _) t -> ('a, [`Any]) t
 val sort : ?cmp:'a ord -> unit -> ('a, [`Any]) t -> ('a, [`Any]) t
 (** Sort items by the given comparison function. Only meaningful when
     there are potentially many elements *)
+
+val sort_by : ?cmp:'b ord -> ('a -> 'b) -> ('a, [`Any]) t -> ('a, [`Any]) t
+(** [sort_by proj c] sorts the collection [c] by projecting elements using
+    [proj], then using [cmp] to order them *)
 
 val distinct : ?cmp:'a ord -> unit -> ('a, [`Any]) t -> ('a, [`Any]) t
 (** Remove duplicate elements from the input collection.

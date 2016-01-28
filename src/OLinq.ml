@@ -309,6 +309,7 @@ type (_, _) unary =
   | Take : int -> ('a, 'a) unary
   | TakeWhile : ('a -> bool) -> ('a, 'a) unary
   | Sort : 'a ord -> ('a, 'a) unary
+  | SortBy : 'b ord * ('a -> 'b) -> ('a, 'a) unary
   | Distinct : 'a ord -> ('a, 'a) unary
   | Search :
       < check: ('a -> 'b search_result);
@@ -349,8 +350,8 @@ type 'a t_ =
 type ('a, 'card) t = 'a t_ constraint 'card = [<`One | `AtMostOne | `Any]
 
 type 'a t_any = ('a, [`Any]) t
-type 'a t_one= ('a, [`One]) t
-type 'a t_at_most_one= ('a, [`AtMostOne]) t
+type 'a t_one = ('a, [`One]) t
+type 'a t_at_most_one = ('a, [`AtMostOne]) t
 
 let of_list l =
   OfSeq (Sequence.of_list l)
@@ -379,6 +380,9 @@ let of_stack s =
 
 let of_string s =
   OfSeq (Sequence.of_str s)
+
+let of_pmap m =
+  OfSeq (PMap.to_seq m)
 
 (** {6 Execution} *)
 
@@ -466,6 +470,7 @@ let _do_unary : type a b. (a,b) unary -> a sequence -> b sequence
     | Take n -> Sequence.take n c
     | TakeWhile p -> Sequence.take_while p c
     | Sort cmp -> Sequence.sort ~cmp c
+    | SortBy (cmp,proj) -> Sequence.sort ~cmp:(fun a b -> cmp (proj a) (proj b)) c
     | Distinct cmp -> ImplemSetOps.distinct ~cmp c
     | Search obj -> Sequence.return (ImplemSetOps.search obj c)
     | GroupBy (build,f) ->
@@ -564,6 +569,8 @@ let take1 q = take 1 q
 let take_while p q = Unary (TakeWhile p, q)
 
 let sort ?(cmp=Pervasives.compare) () q = Unary (Sort cmp, q)
+
+let sort_by ?(cmp=Pervasives.compare) proj q = Unary (SortBy (cmp, proj), q)
 
 let distinct ?(cmp=Pervasives.compare) () q =
   Unary (Distinct cmp, q)
