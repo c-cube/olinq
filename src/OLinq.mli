@@ -35,8 +35,6 @@
 
 *)
 
-(* TODO: monad adapter, as a functor, with (among others)  'a M.t t -> 'a t M.t *)
-
 type 'a sequence = ('a -> unit) -> unit
 type 'a equal = 'a -> 'a -> bool
 type 'a ord = 'a -> 'a -> int
@@ -300,10 +298,8 @@ val fst : ('a * 'b, 'card) t -> ('a, 'card) t
 val snd : ('a * 'b, 'card) t -> ('b, 'card) t
 
 val map_fst : ('a -> 'b) -> ('a * 'c, 'card) t -> ('b * 'c, 'card) t
-(* TODO rename map_fst *)
 
 val map_snd : ('a -> 'b) -> ('c * 'a, 'card) t -> ('c * 'b, 'card) t
-(* TODO rename map_snd *)
 
 val flatten_opt : ('a option, _) t -> ('a, [`Any]) t
 (** Flatten the collection by removing [None] and mapping [Some x] to [x]. *)
@@ -401,7 +397,6 @@ module IO : sig
 
   val lines_l : (string, 'card) t -> (string list, 'card) t
   (** Convert each string into a list of lines *)
-  (* TODO rename, add card 1 *)
 
   val join : string -> (string,_) t -> (string, [>`One]) t
   (** [join sep q] joins all the strings in [q] together,
