@@ -3,35 +3,35 @@
 
 (** {1 LINQ-like operations on collections}
 
-The purpose is to provide powerful combinators to express iteration,
-transformation and combination of collections of items.
+    The purpose is to provide powerful combinators to express iteration,
+    transformation and combination of collections of items.
 
-Functions and operations are assumed to be referentially transparent, i.e.
-they should not rely on external side effects, they should not rely on
-the order of execution.
+    Functions and operations are assumed to be referentially transparent, i.e.
+    they should not rely on external side effects, they should not rely on
+    the order of execution.
 
-{[
+    {[
 
-OLinq.(
-  of_list [1;2;3]
-  |> flat_map (fun x -> Sequence.(x -- (x+10)))
-  |> sort ()
-  |> count ()
-  |> flat_map PMap.to_seq
-  |> List.run
-);;
-- : (int * int) list = [(13, 1); (12, 2); (11, 3); (10, 3); (9, 3);
-    (8, 3); (7, 3); (6, 3); (5, 3); (4, 3); (3, 3); (2, 2); (1, 1)]
+      OLinq.(
+        of_list [1;2;3]
+        |> flat_map (fun x -> Sequence.(x -- (x+10)))
+        |> sort ()
+        |> count ()
+        |> flat_map PMap.to_seq
+        |> List.run
+      );;
+      - : (int * int) list = [(13, 1); (12, 2); (11, 3); (10, 3); (9, 3);
+                              (8, 3); (7, 3); (6, 3); (5, 3); (4, 3); (3, 3); (2, 2); (1, 1)]
 
 
-OLinq.(
-  IO.read_file "/tmp/foo"
-  |> IO.lines
-  |> sort ()
-  |> IO.to_file_lines "/tmp/bar"
-);;
-- :  `Ok ()
-]}
+        OLinq.(
+          IO.read_file "/tmp/foo"
+          |> IO.lines
+          |> sort ()
+          |> IO.to_file_lines "/tmp/bar"
+        );;
+      - :  `Ok ()
+    ]}
 
 *)
 
@@ -43,11 +43,11 @@ type 'a sequence = ('a -> unit) -> unit
 type 'a equal = 'a -> 'a -> bool
 type 'a ord = 'a -> 'a -> int
 type 'a hash = 'a -> int
-type 'a with_err = [`Ok of 'a | `Error of string ]
+type 'a or_error = [`Ok of 'a | `Error of string ]
 
 (** {2 Polymorphic Maps} *)
 module PMap : sig
-  type ('a, 'b) t
+  type ('a, +'b) t
 
   val get : ('a,'b) t -> 'a -> 'b option
 
@@ -61,18 +61,18 @@ module PMap : sig
   (** Transform values *)
 
   val reverse : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash -> unit ->
-                ('a,'b) t -> ('b,'a list) t
+    ('a,'b) t -> ('b,'a list) t
   (** Reverse relation of the map, as a multimap *)
 
   val reverse_multimap : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash -> unit ->
-                          ('a,'b list) t -> ('b,'a list) t
+    ('a,'b list) t -> ('b,'a list) t
   (** Reverse relation of the multimap *)
 
   val fold : ('acc -> 'a -> 'b -> 'acc) -> 'acc -> ('a,'b) t -> 'acc
   (** Fold on the items of the map *)
 
   val fold_multimap : ('acc -> 'a -> 'b -> 'acc) -> 'acc ->
-                      ('a,'b list) t -> 'acc
+    ('a,'b list) t -> 'acc
   (** Fold on the items of the multimap *)
 
   val get_seq : 'a -> ('a, 'b) t -> 'b sequence
@@ -97,10 +97,6 @@ type 'a t
 
 val empty : 'a t
 (** Empty collection *)
-
-val start : 'a -> 'a t
-(** Start with a single value
-    @deprecated since 0.13, use {!return} instead *)
 
 val return : 'a -> 'a t
 (** Return one value *)
@@ -143,6 +139,8 @@ val run1 : 'a t -> 'a
 
 val run_no_optim : ?limit:int -> 'a t -> 'a sequence
 (** Run without any optimization *)
+
+(* TODO: optimizations might be done directly by smart constructors *)
 
 (** {6 Basics} *)
 
@@ -192,17 +190,17 @@ val distinct : ?cmp:'a ord -> unit -> 'a t -> 'a t
 (** {6 Aggregation} *)
 
 val group_by : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
-               ('a -> 'b) -> 'a t -> ('b,'a list) PMap.t t
+  ('a -> 'b) -> 'a t -> ('b,'a list) PMap.t t
 (** [group_by f] takes a collection [c] as input, and returns
     a multimap [m] such that for each [x] in [c],
     [x] occurs in [m] under the key [f x]. In other words, [f] is used
     to obtain a key from [x], and [x] is added to the multimap using this key. *)
 
 val group_by' : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
-                ('a -> 'b) -> 'a t -> ('b * 'a list) t
+  ('a -> 'b) -> 'a t -> ('b * 'a list) t
 
 val count : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
-             unit -> 'a t -> ('a, int) PMap.t t
+  unit -> 'a t -> ('a, int) PMap.t t
 (** [count c] returns a map from elements of [c] to the number
     of time those elements occur. *)
 
@@ -212,7 +210,7 @@ val fold : ('b -> 'a -> 'b) -> 'b -> 'a t -> 'b t
 (** Fold over the collection *)
 
 val reduce : ('a -> 'b) -> ('a -> 'b -> 'b) -> ('b -> 'c) ->
-             'a t -> 'c t
+  'a t -> 'c t
 (** [reduce start mix stop q] uses [start] on the first element of [q],
     and combine the result with following elements using [mix]. The final
     value is transformed using [stop]. *)
@@ -235,9 +233,9 @@ val find_map : ('a -> 'b option) -> 'a t -> 'b option t
 (** {6 Binary Operators} *)
 
 val join : ?cmp:'key ord -> ?eq:'key equal -> ?hash:'key hash ->
-            ('a -> 'key) -> ('b -> 'key) ->
-            merge:('key -> 'a -> 'b -> 'c option) ->
-            'a t -> 'b t -> 'c t
+  ('a -> 'key) -> ('b -> 'key) ->
+  merge:('key -> 'a -> 'b -> 'c option) ->
+  'a t -> 'b t -> 'c t
 (** [join key1 key2 ~merge] is a binary operation
     that takes two collections [a] and [b], projects their
     elements resp. with [key1] and [key2], and combine
@@ -246,8 +244,8 @@ val join : ?cmp:'key ord -> ?eq:'key equal -> ?hash:'key hash ->
     of values is discarded. *)
 
 val group_join : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
-                  ('b -> 'a) -> 'a t -> 'b t ->
-                  ('a, 'b list) PMap.t t
+  ('b -> 'a) -> 'a t -> 'b t ->
+  ('a, 'b list) PMap.t t
 (** [group_join key2] associates to every element [x] of
     the first collection, all the elements [y] of the second
     collection such that [eq x (key y)] *)
@@ -259,17 +257,17 @@ val append : 'a t -> 'a t -> 'a t
 (** Append two collections together *)
 
 val inter : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash -> unit ->
-            'a t -> 'a t -> 'a t
+  'a t -> 'a t -> 'a t
 (** Intersection of two collections. Each element will occur at most once
     in the result *)
 
 val union : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash -> unit ->
-            'a t -> 'a t -> 'a t
+  'a t -> 'a t -> 'a t
 (** Union of two collections. Each element will occur at most once
     in the result *)
 
 val diff : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash -> unit ->
-            'a t -> 'a t -> 'a t
+  'a t -> 'a t -> 'a t
 (** Set difference *)
 
 (** {6 Tuple and Options} *)
@@ -302,8 +300,8 @@ val (<*>) : ('a -> 'b) t -> 'a t -> 'b t
 
 (** {6 Monad}
 
-Careful, those operators do not allow any optimization before running the
-query, they might therefore be pretty slow. *)
+    Careful, those operators do not allow any optimization before running the
+    query, they might therefore be pretty slow. *)
 
 val bind : ('a -> 'b t) -> 'a t -> 'b t
 (** Use the result of a query to build another query and immediately run it. *)
@@ -404,10 +402,10 @@ module IO : sig
 
   (** {8 Run methods} *)
 
-  val to_file : string -> string t -> unit with_err
+  val to_file : string -> string t -> unit or_error
   val to_file_exn : string -> string t -> unit
 
-  val to_file_lines : string -> string t -> unit with_err
+  val to_file_lines : string -> string t -> unit or_error
   val to_file_lines_exn : string -> string t -> unit
 end
 

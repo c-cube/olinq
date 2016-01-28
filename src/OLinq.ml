@@ -7,12 +7,12 @@ type 'a sequence = ('a -> unit) -> unit
 type 'a equal = 'a -> 'a -> bool
 type 'a ord = 'a -> 'a -> int
 type 'a hash = 'a -> int
-type 'a with_err = [`Ok of 'a | `Error of string ]
+type 'a or_error = [`Ok of 'a | `Error of string ]
 
 let id_ x = x
 
 module PMap = struct
-  type ('a, 'b) t = {
+  type ('a, +'b) t = {
     is_empty : unit -> bool;
     size : unit -> int; (* Number of keys *)
     get : 'a -> 'b option;
@@ -41,54 +41,54 @@ module PMap = struct
   (* careful to use this map linearly *)
   let make_hash (type key) ?(eq=(=)) ?(hash=Hashtbl.hash) () =
     let module H = Hashtbl.Make(struct
-      type t = key
-      let equal = eq
-      let hash = hash
-    end) in
+        type t = key
+        let equal = eq
+        let hash = hash
+      end) in
     (* build table *)
     let tbl = H.create 32 in
     let cur = {
       is_empty = (fun () -> H.length tbl = 0);
       size = (fun () -> H.length tbl);
       get = (fun k ->
-        try Some (H.find tbl k)
-        with Not_found -> None);
+          try Some (H.find tbl k)
+          with Not_found -> None);
       fold = (fun f acc -> H.fold (fun k v acc -> f acc k v) tbl acc);
       to_seq = (fun k -> H.iter (fun key v -> k (key,v)) tbl);
     } in
     { cur;
       add = (fun k v -> H.replace tbl k v);
       update = (fun k f ->
-        match (try f (Some (H.find tbl k)) with Not_found -> f None) with
-        | None -> H.remove tbl k
-        | Some v' -> H.replace tbl k v');
+          match (try f (Some (H.find tbl k)) with Not_found -> f None) with
+          | None -> H.remove tbl k
+          | Some v' -> H.replace tbl k v');
     }
 
   let make_cmp (type key) ?(cmp=Pervasives.compare) () =
     let module M = Sequence.Map.Make(struct
-      type t = key
-      let compare = cmp
-    end) in
+        type t = key
+        let compare = cmp
+      end) in
     let map = ref M.empty in
     let cur = {
       is_empty = (fun () -> M.is_empty !map);
       size = (fun () -> M.cardinal !map);
       get = (fun k ->
-        try Some (M.find k !map)
-        with Not_found -> None);
+          try Some (M.find k !map)
+          with Not_found -> None);
       fold = (fun f acc ->
-        M.fold
-          (fun key set acc -> f acc key set) !map acc
-      );
+          M.fold
+            (fun key set acc -> f acc key set) !map acc
+        );
       to_seq = (fun k -> M.to_seq !map k);
     } in
     {
       cur;
       add = (fun k v -> map := M.add k v !map);
       update = (fun k f ->
-        match (try f (Some (M.find k !map)) with Not_found -> f None) with
-        | None -> map := M.remove k !map
-        | Some v' -> map := M.add k v' !map);
+          match (try f (Some (M.find k !map)) with Not_found -> f None) with
+          | None -> map := M.remove k !map
+          | Some v' -> map := M.add k v' !map);
     }
 
   type 'a build_method =
@@ -118,15 +118,15 @@ module PMap = struct
 
   let multimap_of_seq ?(build=make ()) seq =
     seq (fun (k,v) ->
-      build.update k (function
-        | None -> Some [v]
-        | Some l -> Some (v::l)));
+        build.update k (function
+            | None -> Some [v]
+            | Some l -> Some (v::l)));
     build.cur
 
   let count_of_seq ?(build=make ()) seq =
     seq (fun x ->
-      build.update x
-        (function
+        build.update x
+          (function
             | None -> Some 1
             | Some n -> Some (n+1)));
     build.cur
@@ -136,13 +136,13 @@ module PMap = struct
     is_empty = m.is_empty;
     size = m.size;
     get = (fun k -> match m.get k with
-      | None -> None
-      | Some v -> Some (f v)
-    );
+        | None -> None
+        | Some v -> Some (f v)
+      );
     to_seq = Sequence.map (fun (x,y) -> x, f y) m.to_seq;
     fold = (fun f' acc ->
-      m.fold (fun acc x y -> f' acc x (f y)) acc
-    );
+        m.fold (fun acc x y -> f' acc x (f y)) acc
+      );
   }
 
   let to_list m = Sequence.to_rev_list m.to_seq
@@ -180,8 +180,8 @@ module PMap = struct
 
   let flatten m =
     let seq = Sequence.flat_map
-      (fun (k,v) -> Sequence.map (fun v' -> k,v') v)
-       m.to_seq
+        (fun (k,v) -> Sequence.map (fun v' -> k,v') v)
+        m.to_seq
     in
     seq
 
@@ -218,8 +218,8 @@ module ImplemSetOps = struct
     match
       Sequence.find
         (fun x -> match obj#check x with
-          | SearchContinue -> None
-          | SearchStop y -> Some y
+           | SearchContinue -> None
+           | SearchStop y -> Some y
         ) s
     with None -> obj#failure
        | Some x -> x
@@ -230,17 +230,17 @@ module ImplemSetOps = struct
       PMap.multimap_of_seq ~build:(PMap.make ~build:join.join_build ()) seq
     in
     let l = Sequence.fold
-      (fun acc y ->
-        let key = join.join_key2 y in
-        match PMap.get build1 key with
-        | None -> acc
-        | Some l1 ->
-            List.fold_left
-              (fun acc x -> match join.join_merge key x y with
-                | None -> acc
-                | Some res -> res::acc
-              ) acc l1
-      ) [] c2
+        (fun acc y ->
+           let key = join.join_key2 y in
+           match PMap.get build1 key with
+           | None -> acc
+           | Some l1 ->
+               List.fold_left
+                 (fun acc x -> match join.join_merge key x y with
+                    | None -> acc
+                    | Some res -> res::acc
+                 ) acc l1
+        ) [] c2
     in
     Sequence.of_list l
 
@@ -249,13 +249,13 @@ module ImplemSetOps = struct
     c1 (fun x -> PMap.add build x []);
     c2
       (fun y ->
-        (* project [y] into some element of [c1] *)
-        let x = gjoin.gjoin_proj y in
-        PMap.update build x
-          (function
-            | None -> None   (* [x] not present, ignore! *)
-            | Some l -> Some (y::l)
-          )
+         (* project [y] into some element of [c1] *)
+         let x = gjoin.gjoin_proj y in
+         PMap.update build x
+           (function
+             | None -> None   (* [x] not present, ignore! *)
+             | Some l -> Some (y::l)
+           )
       );
     PMap.build_get build
 
@@ -275,15 +275,15 @@ module ImplemSetOps = struct
     let l = ref [] in
     c1 (fun x -> PMap.add build x InterLeft);
     c2 (fun x ->
-      PMap.update build x
-        (function
-           | None -> Some InterDone
-           | Some InterDone as foo -> foo
-           | Some InterLeft ->
-               l := x :: !l;
-               Some InterDone
-        )
-    );
+        PMap.update build x
+          (function
+            | None -> Some InterDone
+            | Some InterDone as foo -> foo
+            | Some InterLeft ->
+                l := x :: !l;
+                Some InterDone
+          )
+      );
     Sequence.of_list !l
 
   let do_diff ~build c1 c2 =
@@ -311,9 +311,9 @@ type (_, _) unary =
   | Sort : 'a ord -> ('a, 'a) unary
   | Distinct : 'a ord -> ('a, 'a) unary
   | Search :
-    < check: ('a -> 'b search_result);
-      failure : 'b;
-    > -> ('a, 'b) unary
+      < check: ('a -> 'b search_result);
+        failure : 'b;
+      > -> ('a, 'b) unary
   | Contains : 'a equal * 'a -> ('a, bool) unary
   | GroupBy : 'b PMap.build_method * ('a -> 'b)
     -> ('a, ('b,'a list) PMap.t) unary
@@ -344,8 +344,6 @@ and 'a t =
   | Binary : ('a, 'b, 'c) binary * 'a t * 'b t -> 'c t
   | Bind : ('a -> 'b t) * 'a t -> 'b t
   | Reflect : 'a t -> 'a sequence t
-
-let start x = Return x
 
 let of_list l =
   OfSeq (Sequence.of_list l)
@@ -415,16 +413,16 @@ and _optimize_unary : type a b. (a,b) unary -> a t -> b t
     | Reduce (start, mix, stop), Unary (Map f, cont) ->
         _optimize_unary
           (Reduce (
-            (fun x -> start (f x)),
-            (fun x acc -> mix (f x) acc),
-            stop))
+              (fun x -> start (f x)),
+              (fun x acc -> mix (f x) acc),
+              stop))
           cont
     | Size, Unary (Map _, cont) ->
         _optimize_unary Size cont  (* ignore the map! *)
     | Size, Unary (Sort _, cont) ->
         _optimize_unary Size cont
     | _ -> Unary (u, _optimize q)
-    (* TODO: other cases *)
+(* TODO: other cases *)
 and _optimize_binary : type a b c. (a,b,c) binary -> a t -> b t -> c t
   = fun b q1 q2 -> match b, q1, q2 with
     | App, Return f, Return x -> Return (f x)
@@ -439,70 +437,70 @@ and _optimize_binary : type a b c. (a,b,c) binary -> a t -> b t -> c t
 
 (* apply a unary operator on a collection *)
 let _do_unary : type a b. (a,b) unary -> a sequence -> b sequence
-= fun u c -> match u with
-  | Map f -> Sequence.map f c
-  | Filter p -> Sequence.filter p c
-  | Fold (f, acc) -> Sequence.return (Sequence.fold f acc c)
-  | Reduce (start, mix, stop) ->
-      let acc = Sequence.fold
-        (fun acc x -> match acc with
-          | None -> Some (start x)
-          | Some acc -> Some (mix x acc)
-        ) None c
-      in
-      begin match acc with
-        | None -> Sequence.empty
-        | Some x -> Sequence.return (stop x)
-      end
-  | Size -> Sequence.return (Sequence.length c)
-  | Choose -> ImplemSetOps.choose c
-  | FilterMap f -> Sequence.filter_map f c
-  | FlatMap f -> Sequence.flat_map f c
-  | Take n -> Sequence.take n c
-  | TakeWhile p -> Sequence.take_while p c
-  | Sort cmp -> Sequence.sort ~cmp c
-  | Distinct cmp -> ImplemSetOps.distinct ~cmp c
-  | Search obj -> Sequence.return (ImplemSetOps.search obj c)
-  | GroupBy (build,f) ->
-      let seq = Sequence.map (fun x -> f x, x) c in
-      Sequence.return (PMap.multimap_of_seq ~build:(PMap.make ~build ()) seq)
-  | Contains (eq, x) -> Sequence.return (Sequence.mem ~eq x c)
-  | Count build ->
-      Sequence.return (PMap.count_of_seq ~build:(PMap.make ~build ()) c)
-  | Lazy -> Sequence.map Lazy.force c
+  = fun u c -> match u with
+    | Map f -> Sequence.map f c
+    | Filter p -> Sequence.filter p c
+    | Fold (f, acc) -> Sequence.return (Sequence.fold f acc c)
+    | Reduce (start, mix, stop) ->
+        let acc = Sequence.fold
+            (fun acc x -> match acc with
+               | None -> Some (start x)
+               | Some acc -> Some (mix x acc)
+            ) None c
+        in
+        begin match acc with
+          | None -> Sequence.empty
+          | Some x -> Sequence.return (stop x)
+        end
+    | Size -> Sequence.return (Sequence.length c)
+    | Choose -> ImplemSetOps.choose c
+    | FilterMap f -> Sequence.filter_map f c
+    | FlatMap f -> Sequence.flat_map f c
+    | Take n -> Sequence.take n c
+    | TakeWhile p -> Sequence.take_while p c
+    | Sort cmp -> Sequence.sort ~cmp c
+    | Distinct cmp -> ImplemSetOps.distinct ~cmp c
+    | Search obj -> Sequence.return (ImplemSetOps.search obj c)
+    | GroupBy (build,f) ->
+        let seq = Sequence.map (fun x -> f x, x) c in
+        Sequence.return (PMap.multimap_of_seq ~build:(PMap.make ~build ()) seq)
+    | Contains (eq, x) -> Sequence.return (Sequence.mem ~eq x c)
+    | Count build ->
+        Sequence.return (PMap.count_of_seq ~build:(PMap.make ~build ()) c)
+    | Lazy -> Sequence.map Lazy.force c
 
 let _do_binary : type a b c. (a, b, c) binary -> a sequence -> b sequence -> c sequence
-= fun b c1 c2 -> match b with
-  | Join join -> ImplemSetOps.do_join ~join c1 c2
-  | GroupJoin gjoin -> Sequence.return (ImplemSetOps.do_group_join ~gjoin c1 c2)
-  | Product -> Sequence.product c1 c2
-  | Append -> Sequence.append c1 c2
-  | App -> Sequence.(c1 <*> c2)
-  | SetOp (Inter,build) -> ImplemSetOps.do_inter ~build c1 c2
-  | SetOp (Union,build) -> ImplemSetOps.do_union ~build c1 c2
-  | SetOp (Diff,build) -> ImplemSetOps.do_diff ~build c1 c2
+  = fun b c1 c2 -> match b with
+    | Join join -> ImplemSetOps.do_join ~join c1 c2
+    | GroupJoin gjoin -> Sequence.return (ImplemSetOps.do_group_join ~gjoin c1 c2)
+    | Product -> Sequence.product c1 c2
+    | Append -> Sequence.append c1 c2
+    | App -> Sequence.(c1 <*> c2)
+    | SetOp (Inter,build) -> ImplemSetOps.do_inter ~build c1 c2
+    | SetOp (Union,build) -> ImplemSetOps.do_union ~build c1 c2
+    | SetOp (Diff,build) -> ImplemSetOps.do_diff ~build c1 c2
 
 let rec _run : type a. opt:bool -> a t -> a sequence
-= fun ~opt q -> match q with
-  | Return c -> Sequence.return c
-  | Unary (u, q') -> _do_unary u (_run ~opt q')
-  | Binary (b, q1, q2) -> _do_binary b (_run ~opt q1) (_run ~opt q2)
-  | OfSeq s -> s
-  | Bind (f, q') ->
-      let seq = _run ~opt q' in
-      Sequence.flat_map
-        (fun x ->
-          let q'' = f x in
-          let q'' = if opt then _optimize q'' else q'' in
-          _run ~opt q''
-        ) seq
-  | Reflect q ->
-    let seq = Sequence.persistent_lazy (_run ~opt q) in
-    Sequence.return seq
+  = fun ~opt q -> match q with
+    | Return c -> Sequence.return c
+    | Unary (u, q') -> _do_unary u (_run ~opt q')
+    | Binary (b, q1, q2) -> _do_binary b (_run ~opt q1) (_run ~opt q2)
+    | OfSeq s -> s
+    | Bind (f, q') ->
+        let seq = _run ~opt q' in
+        Sequence.flat_map
+          (fun x ->
+             let q'' = f x in
+             let q'' = if opt then _optimize q'' else q'' in
+             _run ~opt q''
+          ) seq
+    | Reflect q ->
+        let seq = Sequence.persistent_lazy (_run ~opt q) in
+        Sequence.return seq
 
 let _apply_limit ?limit seq = match limit with
-    | None -> seq
-    | Some l -> Sequence.take l seq
+  | None -> seq
+  | Some l -> Sequence.take l seq
 
 (* safe execution *)
 let run ?limit q =
@@ -588,38 +586,38 @@ let average q = Unary (Reduce (_avg_start, _avg_mix, _avg_stop), q)
 
 let is_empty q =
   Unary (Search (object
-    method check _ = SearchStop false (* stop in case there is an element *)
-    method failure = true
-  end), q)
+           method check _ = SearchStop false (* stop in case there is an element *)
+           method failure = true
+         end), q)
 
 let contains ?(eq=(=)) x q =
   Unary (Contains (eq, x), q)
 
 let for_all p q =
   Unary (Search (object
-    method check x = if p x then SearchContinue else SearchStop false
-    method failure = true
-  end), q)
+           method check x = if p x then SearchContinue else SearchStop false
+           method failure = true
+         end), q)
 
 let exists p q =
   Unary (Search (object
-    method check x = if p x then SearchStop true else SearchContinue
-    method failure = false
-  end), q)
+           method check x = if p x then SearchStop true else SearchContinue
+           method failure = false
+         end), q)
 
 let find p q =
   Unary (Search (object
-    method check x = if p x then SearchStop (Some x) else SearchContinue
-    method failure = None
-  end), q)
+           method check x = if p x then SearchStop (Some x) else SearchContinue
+           method failure = None
+         end), q)
 
 let find_map f q =
   Unary (Search (object
-    method check x = match f x with
-      | Some y -> SearchStop (Some y)
-      | None -> SearchContinue
-    method failure = None
-  end), q)
+           method check x = match f x with
+             | Some y -> SearchStop (Some y)
+             | None -> SearchContinue
+           method failure = None
+         end), q)
 
 (** {6 Binary Operators} *)
 
@@ -815,7 +813,7 @@ module IO = struct
 
   let rec _lines s i k = match _find s '\n' i with
     | None ->
-      if i<String.length s then k (String.sub s i (String.length s-i))
+        if i<String.length s then k (String.sub s i (String.length s-i))
     | Some j ->
         let s' = String.sub s i (j-i) in
         k s';
@@ -834,8 +832,8 @@ module IO = struct
     let buf = Buffer.create 128 in
     Sequence.iteri
       (fun i x ->
-        if i>0 then Buffer.add_string buf sep;
-        Buffer.add_string buf x)
+         if i>0 then Buffer.add_string buf sep;
+         Buffer.add_string buf x)
       seq;
     Buffer.add_string buf stop;
     Buffer.contents buf
