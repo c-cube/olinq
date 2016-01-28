@@ -339,6 +339,9 @@ type (_, _, _) binary =
   | SetOp : set_op * 'a PMap.build_method
     -> ('a, 'a, 'a) binary
 
+(* TODO deal with several possible containers as a 'a t,
+   including seq,vector, PMap... *)
+
 (* type of queries that return values of type ['a] *)
 type 'a t_ =
   | Return : 'a -> 'a t_
@@ -388,66 +391,6 @@ let of_pmap m =
 
 (** {6 Execution} *)
 
-let rec _optimize : type a. a t_ -> a t_
-  = fun q -> match q with
-    | Return _ -> q
-    | Unary (u, q) ->
-        _optimize_unary u (_optimize q)
-    | Binary (b, q1, q2) ->
-        _optimize_binary b (_optimize q1) (_optimize q2)
-    | Reflect q -> Reflect (_optimize q)
-    | OfSeq _ -> q
-    | Bind (f,q) -> Bind(f, _optimize q)  (* cannot optimize [f] before execution *)
-and _optimize_unary : type a b. (a,b) unary -> a t_ -> b t_
-  = fun u q -> match u, q with
-    | Size, Unary (Choose, _) -> Return 1
-    | Map f, Unary (Map g, q') ->
-        _optimize_unary (Map (fun x -> f (g x))) q'
-    | Filter p, Unary (Map f, cont) ->
-        _optimize_unary
-          (FilterMap (fun x -> let y = f x in if p y then Some y else None))
-          cont
-    | Filter p, Unary (Filter p', q) ->
-        _optimize_unary (Filter (fun x -> p x && p' x)) q
-    | FilterMap f, Unary (Map g, q') ->
-        _optimize_unary (FilterMap (fun x -> f (g x))) q'
-    | Map f, Unary (Filter p, cont) ->
-        _optimize_unary
-          (FilterMap (fun x -> if p x then Some (f x) else None))
-          cont
-    | Map _, Binary (Append, q1, q2) ->
-        _optimize_binary Append (Unary (u, q1)) (Unary (u, q2))
-    | Filter _, Binary (Append, q1, q2) ->
-        _optimize_binary Append (Unary (u, q1)) (Unary (u, q2))
-    | Fold (f,acc), Unary (Map f', cont) ->
-        _optimize_unary
-          (Fold ((fun acc x -> f acc (f' x)), acc))
-          cont
-    | Reduce (start, mix, stop), Unary (Map f, cont) ->
-        _optimize_unary
-          (Reduce (
-              (fun x -> start (f x)),
-              (fun x acc -> mix (f x) acc),
-              stop))
-          cont
-    | Size, Unary (Map _, cont) ->
-        _optimize_unary Size cont  (* ignore the map! *)
-    | Size, Unary (Sort _, cont) ->
-        _optimize_unary Size cont
-    | _ -> Unary (u, _optimize q)
-(* TODO: other cases *)
-and _optimize_binary : type a b c. (a,b,c) binary -> a t_ -> b t_ -> c t_
-  = fun b q1 q2 -> match b, q1, q2 with
-    | App, Return f, Return x -> Return (f x)
-    | App, Return f, x -> _optimize_unary (Map f) x
-    | App, f, Return x -> _optimize_unary (Map (fun f -> f x)) f
-    | App, _, _ -> Binary (b, _optimize q1, _optimize q2)
-    | Join _, _, _ -> Binary (b, _optimize q1, _optimize q2)
-    | GroupJoin _, _, _ -> Binary (b, _optimize q1, _optimize q2)
-    | Product, _, _ -> Binary (b, _optimize q1, _optimize q2)
-    | Append, _, _ -> Binary (b, _optimize q1, _optimize q2)
-    | SetOp _, _, _ -> Binary (b, _optimize q1, _optimize q2)
-
 (* apply a unary operator on a collection *)
 let _do_unary : type a b. (a,b) unary -> a sequence -> b sequence
   = fun u c -> match u with
@@ -455,11 +398,12 @@ let _do_unary : type a b. (a,b) unary -> a sequence -> b sequence
     | Filter p -> Sequence.filter p c
     | Fold (f, acc) -> Sequence.return (Sequence.fold f acc c)
     | Reduce (start, mix, stop) ->
-        let acc = Sequence.fold
+        let acc =
+          Sequence.fold
             (fun acc x -> match acc with
                | None -> Some (start x)
-               | Some acc -> Some (mix x acc)
-            ) None c
+               | Some acc -> Some (mix x acc))
+            None c
         in
         begin match acc with
           | None -> Sequence.empty
@@ -494,25 +438,21 @@ let _do_binary : type a b c. (a, b, c) binary -> a sequence -> b sequence -> c s
     | SetOp (Union,build) -> ImplemSetOps.do_union ~build c1 c2
     | SetOp (Diff,build) -> ImplemSetOps.do_diff ~build c1 c2
 
-(* TODO see if optims can be done in smart constructors *)
-(* TODO remove optims from _run *)
-
-let rec _run : type a. opt:bool -> a t_ -> a sequence
-  = fun ~opt q -> match q with
+let rec _run : type a. a t_ -> a sequence
+  = fun q -> match q with
     | Return c -> Sequence.return c
-    | Unary (u, q') -> _do_unary u (_run ~opt q')
-    | Binary (b, q1, q2) -> _do_binary b (_run ~opt q1) (_run ~opt q2)
+    | Unary (u, q') -> _do_unary u (_run q')
+    | Binary (b, q1, q2) -> _do_binary b (_run q1) (_run q2)
     | OfSeq s -> s
     | Bind (f, q') ->
-        let seq = _run ~opt q' in
+        let seq = _run q' in
         Sequence.flat_map
           (fun x ->
              let q'' = f x in
-             let q'' = if opt then _optimize q'' else q'' in
-             _run ~opt q'')
+             _run q'')
           seq
     | Reflect q ->
-        let seq = Sequence.persistent_lazy (_run ~opt q) in
+        let seq = Sequence.persistent_lazy (_run q) in
         Sequence.return seq
 
 let _apply_limit ?limit seq = match limit with
@@ -521,17 +461,17 @@ let _apply_limit ?limit seq = match limit with
 
 (* safe execution *)
 let run ?limit q =
-  let seq = _run ~opt:true (_optimize q) in
+  let seq = _run q in
   _apply_limit ?limit seq
 
 let run1_exn q =
-  let seq = _run ~opt:true (_optimize q) in
+  let seq = _run q in
   match Sequence.head seq with
   | Some x -> x
   | None -> raise Not_found
 
 let run1 q =
-  let seq = _run ~opt:true (_optimize q) in
+  let seq = _run q in
   match Sequence.head seq with
   | Some x -> x
   | None -> assert false (* phantom type *)
@@ -544,27 +484,44 @@ let run_array ?limit q = run ?limit q |> Sequence.to_array
 
 let empty = OfSeq Sequence.empty
 
-let map f q = Unary (Map f, q)
+let rec map
+: type a b. (a -> b) -> a t_ -> b t_
+= fun f q -> match q with
+  | Binary (Append, q1, q2) -> Binary (Append, map f q1, map f q2)
+  | Unary (Map f', q) -> map (fun x -> f (f' x)) q
+  | Unary (Filter p, q) ->
+      filter_map (fun x -> if p x then Some (f x) else None) q
+  | _ -> Unary (Map f, q)
 
-let (>|=) q f = Unary (Map f, q)
+and filter_map
+: type a b. (a -> b option) -> a t_ -> b t_
+= fun f q -> match q with
+  | Unary (Map f', q) -> filter_map (fun x -> f (f' x)) q
+  | _ -> Unary (FilterMap f, q)
 
-let filter p q = Unary (Filter p, q)
+let (>|=) q f = map f q
 
-let choose q = Unary (Choose, q)
-
-let filter_map f q = Unary (FilterMap f, q)
+let rec filter
+: type a. (a -> bool) -> a t_ -> a t_
+= fun p q -> match q with
+  | Binary (Append, q1, q2) -> Binary (Append, filter p q1, filter p q2)
+  | _ -> Unary (Filter p, q)
 
 let flat_map_seq f q = Unary (FlatMap f, q)
 
 let flat_map_l f q =
   let f' x = Sequence.of_list (f x) in
-  Unary (FlatMap f', q)
+  flat_map_seq f' q
 
-let flatten_seq q = Unary (FlatMap (fun x->x), q)
+let flatten_seq q = flat_map_seq id_ q
 
-let flatten q = Unary (FlatMap Sequence.of_list, q)
+let flatten q = flat_map_seq Sequence.of_list q
 
-let take n q = Unary (Take n, q)
+let rec take
+: type a. int -> a t_ -> a t_
+= fun n q -> match q with
+  | Unary (Map f, q) -> map f (take n q)
+  | _ -> Unary (Take n, q)
 
 let take1 q = take 1 q
 
@@ -574,8 +531,7 @@ let sort ?(cmp=Pervasives.compare) () q = Unary (Sort cmp, q)
 
 let sort_by ?(cmp=Pervasives.compare) proj q = Unary (SortBy (cmp, proj), q)
 
-let distinct ?(cmp=Pervasives.compare) () q =
-  Unary (Distinct cmp, q)
+let distinct ?(cmp=Pervasives.compare) () q = Unary (Distinct cmp, q)
 
 let group_by ?cmp ?eq ?hash f q =
   Unary (GroupBy (PMap._make_build ?cmp ?eq ?hash (),f), q)
@@ -589,15 +545,33 @@ let count ?cmp ?eq ?hash () q =
 let count' ?cmp () q =
   flat_map_seq PMap.iter (count ?cmp () q)
 
-let fold f acc q =
-  Unary (Fold (f, acc), q)
+let rec fold
+: type a b. (a -> b -> a) -> a -> b t_ -> a t_
+= fun f acc q -> match q with
+  | Unary (Map f', q) -> fold (fun acc x -> f acc (f' x)) acc q
+  | _ -> Unary (Fold (f, acc), q)
 
-let size q = Unary (Size, q)
+let rec size
+: type a. a t_ -> int t_
+= function
+  | Unary (Choose, _) -> Return 1
+  | Unary (Sort _, q) -> size q
+  | Unary (SortBy _, q) -> size q
+  | Unary (Map _, q) -> size q
+  | q -> Unary (Size, q)
 
 let sum q = Unary (Fold ((+), 0), q)
 
-let reduce start mix stop q =
-  Unary (Reduce (start,mix,stop), q)
+let rec reduce
+: type a b c. (a -> b) -> (a -> b -> b) -> (b -> c) -> a t_ -> c t_
+= fun start mix stop q -> match q with
+  | Unary (Map f, q) ->
+      reduce
+        (fun x -> start (f x))
+        (fun x acc -> mix (f x) acc)
+        stop
+        q
+  | _ -> Unary (Reduce (start,mix,stop), q)
 
 let _avg_start x = (x,1)
 let _avg_mix x (y,n) = (x+y,n+1)
@@ -710,7 +684,11 @@ let opt_unwrap_exn q =
 
 let pure x = Return x
 
-let app f x = Binary (App, f, x)
+let app f x = match f, x with
+  | Return f, Return x -> Return (f x)
+  | Return f, _ -> map f x
+  | f, Return x -> map (fun f -> f x) f
+  | _ -> Binary (App, f, x)
 
 let (<*>) = app
 
@@ -729,6 +707,22 @@ let lazy_ q = Unary (Lazy, q)
 let reflect_seq q = Reflect q
 
 let reflect_l q = Unary (Map Sequence.to_list, Reflect q)
+
+(** {6 Others} *)
+
+let rec choose
+: type a. a t_ -> a t_
+= function
+  | Unary (Map f, q) -> map f (choose q)
+  | Unary (Lazy, q) -> Unary (Lazy, choose q)
+  | Binary (Product, q1, q2) ->
+      let q1 = choose q1 and q2 = choose q2 in
+      app (map (fun x y -> x,y) q1) q2
+  | Binary (App, f, x) ->
+      let q_f = choose f and q_x = choose x in
+      app (map (fun f x -> f x) q_f) q_x
+  | Unary (Fold _, _) as q -> q (* one solution *)
+  | q -> Unary (Choose, q)
 
 (** {6 Infix} *)
 
