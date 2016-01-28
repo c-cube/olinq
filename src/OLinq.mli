@@ -88,154 +88,171 @@ module PMap : sig
   (** View a multimap as a list of individual key/value pairs *)
 end
 
-(** {2 Query operators} *)
+(** {2 Main Type} *)
 
-type 'a t
-(** Type of a query that returns zero, one or more values of type 'a *)
+type ('a, 'card) t constraint 'card = [<`One | `AtMostOne | `Any]
+(** Type of a query that returns zero, one or more values of type 'a.
+    The parameter ['card] indicates how many elements are in the collection,
+    with [`Any] indicating the number is unknown, [`AtMostOne] that there
+    are 0 or 1 elements and [`One] exactly one.
 
-(** {6 Initial values} *)
+    Conceptually, the cardinalities are ordered from most precise (`One)
+    to least precise (`Any):  `One < `AtMostOne < `Any. *)
 
-val empty : 'a t
+type 'a t_any = ('a, [`Any]) t
+type 'a t_one= ('a, [`One]) t
+type 'a t_at_most_one= ('a, [`AtMostOne]) t
+
+(** {2 Initial values} *)
+
+val empty : ('a, [`AtMostOne]) t
 (** Empty collection *)
 
-val return : 'a -> 'a t
+val return : 'a -> ('a, [>`One]) t
 (** Return one value *)
 
-val of_list : 'a list -> 'a t
+val of_list : 'a list -> ('a, [`Any]) t
 (** Query that just returns the elements of the list *)
 
-val of_array : 'a array -> 'a t
-val of_array_i : 'a array -> (int * 'a) t
+val of_array : 'a array -> ('a, [`Any]) t
+val of_array_i : 'a array -> (int * 'a, [`Any]) t
 
-val range : int -> int -> int t
+val range : int -> int -> (int, [`Any]) t
 (** [range i j] goes from [i] up to [j] included *)
 
-val (--) : int -> int -> int t
+val (--) : int -> int -> (int, [`Any]) t
 (** Synonym to {!range} *)
 
-val of_hashtbl : ('a,'b) Hashtbl.t -> ('a * 'b) t
+val of_hashtbl : ('a,'b) Hashtbl.t -> ('a * 'b, [`Any]) t
 
-val of_seq : 'a sequence -> 'a t
+val of_seq : 'a sequence -> ('a, [`Any]) t
 (** Query that returns the elements of the given sequence. *)
 
-val of_queue : 'a Queue.t -> 'a t
+val of_queue : 'a Queue.t -> ('a, [`Any]) t
 
-val of_stack : 'a Stack.t -> 'a t
+val of_stack : 'a Stack.t -> ('a, [`Any]) t
 
-val of_string : string -> char t
+val of_string : string -> (char, [`Any]) t
 (** Traverse the characters of the string *)
 
 (** {6 Execution} *)
 
-val run : ?limit:int -> 'a t -> 'a sequence
+val run : ?limit:int -> ('a, _) t -> 'a sequence
 (** Execute the query, possibly returning an error if things go wrong
     @param limit max number of values to return *)
 
-val run1 : 'a t -> 'a
-(** Run the query and return the first value
-    @raise Not_found if the query succeeds with 0 element *)
-(* TODO: no exception, takes a ('a, one) t *)
-(* TODO: run1_exn taking  ('a, _) t *)
+val run_list : ?limit:int -> ('a, _) t -> 'a list
 
-val run_no_optim : ?limit:int -> 'a t -> 'a sequence
-(** Run without any optimization *)
+val run_array : ?limit:int -> ('a, _) t -> 'a array
+
+val run1 : ('a, [`One]) t -> 'a
+(** Run the query and return the only value *)
+
+val run1_exn : ('a, _) t -> 'a
+(** @raise Not_found if the query contains 0 element *)
 
 (* TODO: optimizations might be done directly by smart constructors *)
 
 (** {6 Basics} *)
 
-val map : ('a -> 'b) -> 'a t -> 'b t
+val map : ('a -> 'b) -> ('a, 'card) t -> ('b, 'card) t
 (** Map each value *)
 
-val (>|=) : 'a t -> ('a -> 'b) -> 'b t
+val (>|=) : ('a, 'card) t -> ('a -> 'b) -> ('b, 'card) t
 (** Infix synonym of {!map} *)
 
-val filter : ('a -> bool) -> 'a t -> 'a t
-(** Filter out values that do not satisfy predicate *)
+val filter : ('a -> bool) -> ('a, _) t -> ('a, [`Any]) t
+(** Filter out values that do not satisfy predicate. We lose precision
+    on the cardinality because of type system constraints. *)
 
-val size : _ t -> int t
+val size : _ t -> (int, [>`One]) t
 (** [size t] returns one value, the number of items returned by [t] *)
 
-val choose : 'a t -> 'a t
+val choose : ('a, _) t -> ('a, [>`AtMostOne]) t
 (** Choose one element (if any, otherwise empty) in the collection.
     This is like a "cut" in prolog. *)
 
-val filter_map : ('a -> 'b option) -> 'a t -> 'b t
+val filter_map : ('a -> 'b option) -> ('a, _) t -> ('b, [`Any]) t
 (** Filter and map elements at once *)
 
-val flat_map : ('a -> 'b sequence) -> 'a t -> 'b t
+val flat_map_seq : ('a -> 'b sequence) -> ('a, _) t -> ('b, [`Any]) t
 (** Same as {!flat_map} but using sequences *)
 (* TODO rename flat_map_seq *)
 
-val flat_map_l : ('a -> 'b list) -> 'a t -> 'b t
+val flat_map_l : ('a -> 'b list) -> ('a, _) t -> ('b, [`Any]) t
 (** map each element to a collection and flatten the result *)
 
-val flatten : 'a list t -> 'a t
+val flatten : ('a list, _) t -> ('a, [`Any]) t
 
-val flatten_seq : 'a sequence t -> 'a t
+val flatten_seq : ('a sequence,_) t -> ('a, [`Any]) t
 
-val take : int -> 'a t -> 'a t
+val take : int -> ('a, _) t -> ('a, [`Any]) t
 (** Take at most [n] elements *)
 
-val take_while : ('a -> bool) -> 'a t -> 'a t
+val take1 : ('a, _) t -> ('a, [>`AtMostOne]) t
+(** Specialized version of {!take} that keeps only the first element *)
+
+val take_while : ('a -> bool) -> ('a, _) t -> ('a, [`Any]) t
 (** Take elements while they satisfy a predicate *)
 
-val sort : ?cmp:'a ord -> unit -> 'a t -> 'a t
-(** Sort items by the given comparison function *)
+val sort : ?cmp:'a ord -> unit -> ('a, [`Any]) t -> ('a, [`Any]) t
+(** Sort items by the given comparison function. Only meaningful when
+    there are potentially many elements *)
 
-val distinct : ?cmp:'a ord -> unit -> 'a t -> 'a t
+val distinct : ?cmp:'a ord -> unit -> ('a, [`Any]) t -> ('a, [`Any]) t
 (** Remove duplicate elements from the input collection.
     All elements in the result are distinct. *)
 
 (** {6 Aggregation} *)
 
 val group_by : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
-  ('a -> 'b) -> 'a t -> ('b,'a list) PMap.t t
+  ('a -> 'b) -> ('a, [`Any]) t -> (('b,'a list) PMap.t, [>`One]) t
 (** [group_by f] takes a collection [c] as input, and returns
     a multimap [m] such that for each [x] in [c],
     [x] occurs in [m] under the key [f x]. In other words, [f] is used
     to obtain a key from [x], and [x] is added to the multimap using this key. *)
 
 val group_by' : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
-  ('a -> 'b) -> 'a t -> ('b * 'a list) t
+  ('a -> 'b) -> ('a, [`Any]) t -> ('b * 'a list, [`Any]) t
 
 val count : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
-  unit -> 'a t -> ('a, int) PMap.t t
+  unit -> ('a, [`Any]) t -> (('a, int) PMap.t, [>`One]) t
 (** [count c] returns a map from elements of [c] to the number
     of time those elements occur. *)
 
-val count' : ?cmp:'a ord -> unit -> 'a t -> ('a * int) t
+val count' : ?cmp:'a ord -> unit -> ('a, [`Any]) t -> ('a * int, [`Any]) t
 
-val fold : ('b -> 'a -> 'b) -> 'b -> 'a t -> 'b t
+val fold : ('b -> 'a -> 'b) -> 'b -> ('a, _) t -> ('b, [>`One]) t
 (** Fold over the collection *)
 
-val reduce : ('a -> 'b) -> ('a -> 'b -> 'b) -> ('b -> 'c) ->
-  'a t -> 'c t
+val reduce :
+  ('a -> 'b) -> ('a -> 'b -> 'b) -> ('b -> 'c) ->
+  ('a,_) t -> ('c, [>`One]) t
 (** [reduce start mix stop q] uses [start] on the first element of [q],
     and combine the result with following elements using [mix]. The final
     value is transformed using [stop]. *)
 
-val is_empty : 'a t -> bool t
+val is_empty : ('a, [<`AtMostOne | `Any]) t -> (bool, [>`One]) t
 
-val sum : int t -> int t
+val sum : (int, [<`AtMostOne | `Any]) t -> (int, [>`One]) t
 
-val contains : ?eq:'a equal -> 'a -> 'a t -> bool t
+val contains : ?eq:'a equal -> 'a -> ('a, _) t -> (bool, [>`One]) t
 
-val average : int t -> int t
-val max : int t -> int t
-val min : int t -> int t
+val average : (int, _) t -> (int, [>`One]) t
+val max : (int, _) t -> (int, [>`One]) t
+val min : (int, _) t -> (int, [>`One]) t
 
-val for_all : ('a -> bool) -> 'a t -> bool t
-val exists : ('a -> bool) -> 'a t -> bool t
-val find : ('a -> bool) -> 'a t -> 'a option t
-val find_map : ('a -> 'b option) -> 'a t -> 'b option t
+val for_all : ('a -> bool) -> ('a, _) t -> (bool, [>`One]) t
+val exists : ('a -> bool) -> ('a, _) t -> (bool, [>`One]) t
+val find : ('a -> bool) -> ('a, _) t -> ('a option, [>`One]) t
+val find_map : ('a -> 'b option) -> ('a, _) t -> ('b option, [>`One]) t
 
 (** {6 Binary Operators} *)
 
 val join : ?cmp:'key ord -> ?eq:'key equal -> ?hash:'key hash ->
   ('a -> 'key) -> ('b -> 'key) ->
   merge:('key -> 'a -> 'b -> 'c option) ->
-  'a t -> 'b t -> 'c t
+  ('a, _) t -> ('b, _) t -> ('c, [`Any]) t
 (** [join key1 key2 ~merge] is a binary operation
     that takes two collections [a] and [b], projects their
     elements resp. with [key1] and [key2], and combine
@@ -244,58 +261,59 @@ val join : ?cmp:'key ord -> ?eq:'key equal -> ?hash:'key hash ->
     of values is discarded. *)
 
 val group_join : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
-  ('b -> 'a) -> 'a t -> 'b t ->
-  ('a, 'b list) PMap.t t
+  ('b -> 'a) -> ('a,_) t -> ('b,_) t ->
+  (('a, 'b list) PMap.t, [>`One]) t
 (** [group_join key2] associates to every element [x] of
     the first collection, all the elements [y] of the second
     collection such that [eq x (key y)] *)
 
-val product : 'a t -> 'b t -> ('a * 'b) t
+val product : ('a, _) t -> ('b,_) t -> ('a * 'b, [`Any]) t
 (** Cartesian product *)
 
-val append : 'a t -> 'a t -> 'a t
+val append : ('a,_) t -> ('a,_) t -> ('a, [`Any]) t
 (** Append two collections together *)
 
 val inter : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash -> unit ->
-  'a t -> 'a t -> 'a t
+  ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
 (** Intersection of two collections. Each element will occur at most once
     in the result *)
 
 val union : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash -> unit ->
-  'a t -> 'a t -> 'a t
+  ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
 (** Union of two collections. Each element will occur at most once
     in the result *)
 
 val diff : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash -> unit ->
-  'a t -> 'a t -> 'a t
+  ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
 (** Set difference *)
 
 (** {6 Tuple and Options} *)
 
 (** Specialized projection operators *)
 
-val fst : ('a * 'b) t -> 'a t
+val fst : ('a * 'b, 'card) t -> ('a, 'card) t
 
-val snd : ('a * 'b) t -> 'b t
+val snd : ('a * 'b, 'card) t -> ('b, 'card) t
 
-val map1 : ('a -> 'b) -> ('a * 'c) t -> ('b * 'c) t
+val map_fst : ('a -> 'b) -> ('a * 'c, 'card) t -> ('b * 'c, 'card) t
 (* TODO rename map_fst *)
 
-val map2 : ('a -> 'b) -> ('c * 'a) t -> ('c * 'b) t
+val map_snd : ('a -> 'b) -> ('c * 'a, 'card) t -> ('c * 'b, 'card) t
 (* TODO rename map_snd *)
 
-val flatten_opt : 'a option t -> 'a t
-(** Flatten the collection by removing options *)
+val flatten_opt : ('a option, _) t -> ('a, [`Any]) t
+(** Flatten the collection by removing [None] and mapping [Some x] to [x]. *)
 
 (** {6 Applicative} *)
 
-val pure : 'a -> 'a t
+val pure : 'a -> ('a, _) t
 (** Synonym to {!return} *)
 
-val app : ('a -> 'b) t -> 'a t -> 'b t
-(** Apply each function to each value *)
+val app : ('a -> 'b, 'card) t -> ('a, 'card) t -> ('b, 'card) t
+(** Apply each function to each value. The cardinality should be the lowest
+    upper bound of both input cardinalities (any,_) -> any, (one,one) -> one, etc. *)
 
-val (<*>) : ('a -> 'b) t -> 'a t -> 'b t
+val (<*>) : ('a -> 'b, 'card) t -> ('a, 'card) t -> ('b, 'card) t
 (** Infix synonym to {!app} *)
 
 (** {6 Monad}
@@ -303,110 +321,102 @@ val (<*>) : ('a -> 'b) t -> 'a t -> 'b t
     Careful, those operators do not allow any optimization before running the
     query, they might therefore be pretty slow. *)
 
-val bind : ('a -> 'b t) -> 'a t -> 'b t
+val flat_map : ('a -> ('b, _) t) -> ('a,_) t -> ('b, [`Any]) t
 (** Use the result of a query to build another query and immediately run it. *)
 (* TODO rename into flat_map *)
 
-val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
+val (>>=) : ('a, _) t -> ('a -> ('b, _) t) -> ('b, [`Any]) t
 (** Infix version of {!bind} *)
 
 (** {6 Misc} *)
 
-val lazy_ : 'a lazy_t t -> 'a t
+val lazy_ : ('a lazy_t, 'card) t -> ('a, 'card) t
 
 exception UnwrapNone
 
-val opt_unwrap : 'a option t -> 'a t
+val opt_unwrap_exn : ('a option, 'card) t -> ('a, 'card) t
 (** @raise UnwrapNone if some option is None *)
 
-val reflect : 'a t -> 'a sequence t
+val reflect_seq : ('a, _) t -> ('a sequence, [>`One]) t
 (** [reflect q] evaluates all values in [q] and returns a sequence
     of all those values. Also blocks optimizations *)
 
-(* TODO: return cardinality one *)
-(* TODO: reflect_l, reflect_array, etc. *)
+val reflect_l : ('a, _) t -> ('a list, [>`One]) t
+(** [reflect q] evaluates all values in [q] and returns a list
+    of all those values. Also blocks optimizations *)
+
 (* TODO: maybe a small vec type for efficient reflection *)
 
 (** {6 Infix} *)
 
 module Infix : sig
-  val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
-  val (>|=) : 'a t -> ('a -> 'b) -> 'b t
-  val (<*>) : ('a -> 'b) t -> 'a t -> 'b t
-  val (--) : int -> int -> int t
+  val (--) : int -> int -> (int, [`Any]) t
+  val (>|=) : ('a, 'card) t -> ('a -> 'b) -> ('b, 'card) t
+  val (<*>) : ('a -> 'b, 'card) t -> ('a, 'card) t -> ('b, 'card) t
+  val (>>=) : ('a, _) t -> ('a -> ('b, _) t) -> ('b, [`Any]) t
 end
 
 (** {6 Adapters} *)
 
-val to_seq : 'a t  -> 'a sequence t
+val to_seq : ('a,_) t  -> ('a sequence, [>`One]) t
 (** Build a (re-usable) sequence of elements, which can then be
-    converted into other structures *)
+    converted into other structures. Synonym to {!reflect_seq}.  *)
 
-val to_hashtbl : ('a * 'b) t -> ('a, 'b) Hashtbl.t t
+val to_hashtbl : (('a * 'b), _) t -> (('a, 'b) Hashtbl.t, [>`One]) t
 (** Build a hashtable from the collection *)
 
-val to_queue : 'a t -> 'a Queue.t t
+val to_queue : ('a,_) t -> ('a Queue.t, [>`One]) t
 
-val to_stack : 'a t -> 'a Stack.t t
-
-module List : sig
-  val of_list : 'a list -> 'a t
-  val to_list : 'a t -> 'a list t (* TODO rename reflect ? *)
-  val run : 'a t -> 'a list
-end
-
-module Array : sig
-  val of_array : 'a array -> 'a t
-  val to_array : 'a t -> 'a array t  (* TODO rename reflect ? *)
-  val run : 'a t -> 'a array
-end
+val to_stack : ('a,_) t -> ('a Stack.t, [>`One]) t
 
 module AdaptSet(S : Set.S) : sig
-  val of_set : S.t -> S.elt t
-  val to_set : S.elt t -> S.t t
-  val run : S.elt t -> S.t
+  val of_set : S.t -> (S.elt, [`Any]) t
+  val reflect : (S.elt,_) t -> (S.t, [>`One]) t
+  val run : (S.elt, _) t -> S.t
 end
 
 module AdaptMap(M : Map.S) : sig
-  val of_map : 'a M.t -> (M.key * 'a) t
+  val of_map : 'a M.t -> (M.key * 'a, [`Any]) t
   val to_pmap : 'a M.t -> (M.key, 'a) PMap.t
-  val to_map : (M.key * 'a) t -> 'a M.t t
-  val run : (M.key * 'a) t -> 'a M.t
+  val reflect : (M.key * 'a, _) t -> ('a M.t, [`One]) t
+  val run : (M.key * 'a, _) t -> 'a M.t
 end
 
 module IO : sig
-  val read_chan : in_channel -> string t
+  val read_chan : in_channel -> (string, [>`One]) t
   (** Read the content of the whole channel in (blocking), returning the
       corresponding string. The channel will be read at most once
       during execution, and its content cached; however the channel
       might never get read because evaluation is lazy. *)
 
-  val read_file : string -> string t
+  val read_file : string -> (string, [>`One]) t
   (** Read a whole file (given by name) and return its content as a string *)
 
-  val lines : string t -> string t
+  val lines : (string, _) t -> (string, [`Any]) t
   (** Convert a string into a collection of lines *)
 
-  val lines' : string t -> string list t
-  (** Convert a string into a list of lines *)
+  val lines_l : (string, 'card) t -> (string list, 'card) t
+  (** Convert each string into a list of lines *)
   (* TODO rename, add card 1 *)
 
-  val join : string -> string t -> string t
+  val join : string -> (string,_) t -> (string, [>`One]) t
+  (** [join sep q] joins all the strings in [q] together,
+      similar to [String.join sep (run_list q)] basically. *)
 
-  val unlines : string t -> string t
+  val unlines : (string, _) t -> (string, [>`One]) t
   (** Join lines together *)
 
-  val out : out_channel -> string t -> unit
-  val out_lines : out_channel -> string t -> unit
+  val out : out_channel -> (string, _) t -> unit
+  val out_lines : out_channel -> (string, _) t -> unit
   (** Evaluate the query and print it line by line on the output *)
 
   (** {8 Run methods} *)
 
-  val to_file : string -> string t -> unit or_error
-  val to_file_exn : string -> string t -> unit
+  val to_file : string -> (string, _) t -> unit or_error
+  val to_file_exn : string -> (string, _) t -> unit
 
-  val to_file_lines : string -> string t -> unit or_error
-  val to_file_lines_exn : string -> string t -> unit
+  val to_file_lines : string -> (string, _) t -> unit or_error
+  val to_file_lines_exn : string -> (string, _) t -> unit
 end
 
 (* TODO printer, table printer, ... ? *)

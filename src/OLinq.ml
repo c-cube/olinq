@@ -336,14 +336,21 @@ type (_, _, _) binary =
   | SetOp : set_op * 'a PMap.build_method
     -> ('a, 'a, 'a) binary
 
-(* type of queries that return a 'a *)
-and 'a t =
-  | Return : 'a -> 'a t
-  | OfSeq : 'a sequence -> 'a t
-  | Unary : ('a, 'b) unary * 'a t -> 'b t
-  | Binary : ('a, 'b, 'c) binary * 'a t * 'b t -> 'c t
-  | Bind : ('a -> 'b t) * 'a t -> 'b t
-  | Reflect : 'a t -> 'a sequence t
+(* type of queries that return values of type ['a] *)
+type 'a t_ =
+  | Return : 'a -> 'a t_
+  | OfSeq : 'a sequence -> 'a t_
+  | Unary : ('a, 'b) unary * 'a t_ -> 'b t_
+  | Binary : ('a, 'b, 'c) binary * 'a t_ * 'b t_ -> 'c t_
+  | Bind : ('a -> 'b t_) * 'a t_ -> 'b t_
+  | Reflect : 'a t_ -> 'a sequence t_
+
+(* type of queries, with an additional phantom parameter *)
+type ('a, 'card) t = 'a t_ constraint 'card = [<`One | `AtMostOne | `Any]
+
+type 'a t_any = ('a, [`Any]) t
+type 'a t_one= ('a, [`One]) t
+type 'a t_at_most_one= ('a, [`AtMostOne]) t
 
 let of_list l =
   OfSeq (Sequence.of_list l)
@@ -375,7 +382,7 @@ let of_string s =
 
 (** {6 Execution} *)
 
-let rec _optimize : type a. a t -> a t
+let rec _optimize : type a. a t_ -> a t_
   = fun q -> match q with
     | Return _ -> q
     | Unary (u, q) ->
@@ -385,7 +392,7 @@ let rec _optimize : type a. a t -> a t
     | Reflect q -> Reflect (_optimize q)
     | OfSeq _ -> q
     | Bind (f,q) -> Bind(f, _optimize q)  (* cannot optimize [f] before execution *)
-and _optimize_unary : type a b. (a,b) unary -> a t -> b t
+and _optimize_unary : type a b. (a,b) unary -> a t_ -> b t_
   = fun u q -> match u, q with
     | Size, Unary (Choose, _) -> Return 1
     | Map f, Unary (Map g, q') ->
@@ -423,7 +430,7 @@ and _optimize_unary : type a b. (a,b) unary -> a t -> b t
         _optimize_unary Size cont
     | _ -> Unary (u, _optimize q)
 (* TODO: other cases *)
-and _optimize_binary : type a b c. (a,b,c) binary -> a t -> b t -> c t
+and _optimize_binary : type a b c. (a,b,c) binary -> a t_ -> b t_ -> c t_
   = fun b q1 q2 -> match b, q1, q2 with
     | App, Return f, Return x -> Return (f x)
     | App, Return f, x -> _optimize_unary (Map f) x
@@ -480,7 +487,10 @@ let _do_binary : type a b c. (a, b, c) binary -> a sequence -> b sequence -> c s
     | SetOp (Union,build) -> ImplemSetOps.do_union ~build c1 c2
     | SetOp (Diff,build) -> ImplemSetOps.do_diff ~build c1 c2
 
-let rec _run : type a. opt:bool -> a t -> a sequence
+(* TODO see if optims can be done in smart constructors *)
+(* TODO remove optims from _run *)
+
+let rec _run : type a. opt:bool -> a t_ -> a sequence
   = fun ~opt q -> match q with
     | Return c -> Sequence.return c
     | Unary (u, q') -> _do_unary u (_run ~opt q')
@@ -492,8 +502,8 @@ let rec _run : type a. opt:bool -> a t -> a sequence
           (fun x ->
              let q'' = f x in
              let q'' = if opt then _optimize q'' else q'' in
-             _run ~opt q''
-          ) seq
+             _run ~opt q'')
+          seq
     | Reflect q ->
         let seq = Sequence.persistent_lazy (_run ~opt q) in
         Sequence.return seq
@@ -507,15 +517,21 @@ let run ?limit q =
   let seq = _run ~opt:true (_optimize q) in
   _apply_limit ?limit seq
 
-let run_no_optim ?limit q =
-  let seq = _run ~opt:false q in
-  _apply_limit ?limit seq
+let run1_exn q =
+  let seq = _run ~opt:true (_optimize q) in
+  match Sequence.head seq with
+  | Some x -> x
+  | None -> raise Not_found
 
 let run1 q =
   let seq = _run ~opt:true (_optimize q) in
   match Sequence.head seq with
   | Some x -> x
-  | None -> raise Not_found
+  | None -> assert false (* phantom type *)
+
+let run_list ?limit q = run ?limit q |> Sequence.to_list
+
+let run_array ?limit q = run ?limit q |> Sequence.to_array
 
 (** {6 Basics} *)
 
@@ -531,7 +547,7 @@ let choose q = Unary (Choose, q)
 
 let filter_map f q = Unary (FilterMap f, q)
 
-let flat_map f q = Unary (FlatMap f, q)
+let flat_map_seq f q = Unary (FlatMap f, q)
 
 let flat_map_l f q =
   let f' x = Sequence.of_list (f x) in
@@ -542,6 +558,8 @@ let flatten_seq q = Unary (FlatMap (fun x->x), q)
 let flatten q = Unary (FlatMap Sequence.of_list, q)
 
 let take n q = Unary (Take n, q)
+
+let take1 q = take 1 q
 
 let take_while p q = Unary (TakeWhile p, q)
 
@@ -554,13 +572,13 @@ let group_by ?cmp ?eq ?hash f q =
   Unary (GroupBy (PMap._make_build ?cmp ?eq ?hash (),f), q)
 
 let group_by' ?cmp ?eq ?hash f q =
-  flat_map PMap.iter (group_by ?cmp ?eq ?hash f q)
+  flat_map_seq PMap.iter (group_by ?cmp ?eq ?hash f q)
 
 let count ?cmp ?eq ?hash () q =
   Unary (Count (PMap._make_build ?cmp ?eq ?hash ()), q)
 
 let count' ?cmp () q =
-  flat_map PMap.iter (count ?cmp () q)
+  flat_map_seq PMap.iter (count ?cmp () q)
 
 let fold f acc q =
   Unary (Fold (f, acc), q)
@@ -658,14 +676,14 @@ let diff ?cmp ?eq ?hash () q1 q2 =
 let fst q = map fst q
 let snd q = map snd q
 
-let map1 f q = map (fun (x,y) -> f x, y) q
-let map2 f q = map (fun (x,y) -> x, f y) q
+let map_fst f q = map (fun (x,y) -> f x, y) q
+let map_snd f q = map (fun (x,y) -> x, f y) q
 
 let flatten_opt q = filter_map id_ q
 
 exception UnwrapNone
 
-let opt_unwrap q =
+let opt_unwrap_exn q =
   Unary
     (Map
        (function
@@ -685,7 +703,7 @@ let (<*>) = app
 
 let return x = Return x
 
-let bind f q = Bind (f,q)
+let flat_map f q = Bind (f,q)
 
 let (>>=) x f = Bind (f, x)
 
@@ -693,7 +711,9 @@ let (>>=) x f = Bind (f, x)
 
 let lazy_ q = Unary (Lazy, q)
 
-let reflect q = Reflect q
+let reflect_seq q = Reflect q
+
+let reflect_l q = Unary (Map Sequence.to_list, Reflect q)
 
 (** {6 Infix} *)
 
@@ -706,7 +726,7 @@ end
 
 (** {6 Adapters} *)
 
-let to_seq q = reflect q
+let to_seq q = reflect_seq q
 
 let to_hashtbl q =
   Unary (Map (fun c -> Sequence.to_hashtbl c), Reflect q)
@@ -717,27 +737,14 @@ let to_queue q =
 let to_stack q =
   Unary (Map (fun c -> let s = Stack.create () in Sequence.to_stack s c; s), Reflect q)
 
-module List = struct
-  let of_list l = OfSeq (Sequence.of_list l)
-  let to_list q = map Sequence.to_list (Reflect q)
-  let run q = run1 (to_list q)
-end
-
-module Array = struct
-  let of_array a = OfSeq (Sequence.of_array a)
-  let to_array q =
-    map (fun s -> Array.of_list (Sequence.to_list s)) (Reflect q)
-  let run q = run1 (to_array q)
-end
-
 module AdaptSet(S : Set.S) = struct
   let of_set set = OfSeq (fun k -> S.iter k set)
 
-  let to_set q =
+  let reflect q =
     let f c = Sequence.fold (fun set x -> S.add x set) S.empty c in
-    map f (reflect q)
+    map f (reflect_seq q)
 
-  let run q = run1 (to_set q)
+  let run q = run1 (reflect q)
 end
 
 module AdaptMap(M : Map.S) = struct
@@ -753,13 +760,13 @@ module AdaptMap(M : Map.S) = struct
     PMap.to_seq = _to_seq m;
   }
 
-  let to_map q =
+  let reflect q =
     let f c =
       Sequence.fold (fun m (x,y) -> M.add x y m) M.empty c
     in
-    map f (reflect q)
+    map f (reflect_seq q)
 
-  let run q = run1 (to_map q)
+  let run q = run1 (reflect q)
 end
 
 module IO = struct
@@ -822,9 +829,9 @@ module IO = struct
   let lines q =
     (* sequence of lines *)
     let f s = _lines s 0 in
-    flat_map f q
+    flat_map_seq f q
 
-  let lines' q =
+  let lines_l q =
     let f s = lazy (Sequence.to_list (_lines s 0)) in
     lazy_ (map f q)
 
@@ -840,11 +847,11 @@ module IO = struct
 
   let unlines q =
     let f l = lazy (_join ~sep:"\n" ~stop:"\n" l) in
-    lazy_ (map f (reflect q))
+    lazy_ (map f (reflect_seq q))
 
   let join sep q =
     let f l = lazy (_join ~sep l) in
-    lazy_ (map f (reflect q))
+    lazy_ (map f (reflect_seq q))
 
   let out oc q =
     output_string oc (run1 q)
