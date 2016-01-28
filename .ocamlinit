@@ -1,0 +1,8 @@
+
+#use "topfind";;
+#require "sequence";;
+
+#directory "_build/src";;
+#load "olinq.cma";;
+
+open OLinq.Infix;;
