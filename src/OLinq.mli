@@ -48,6 +48,15 @@ type 'a or_error = [`Ok of 'a | `Error of string ]
 
 *)
 
+module Iterable : sig
+  type 'a t
+
+  val of_list : 'a list -> 'a t
+  val of_vec : 'a OLinq_vec.t -> 'a t
+
+  val to_list : 'a t -> 'a list
+  val to_vec : 'a t -> 'a OLinq_vec.t
+end
 
 (** {2 Polymorphic Maps} *)
 module M = OLinq_map
@@ -92,6 +101,8 @@ val of_hashtbl : ('a,'b) Hashtbl.t -> ('a * 'b, [`Any]) t
 val of_seq : 'a sequence -> ('a, [`Any]) t
 (** Query that returns the elements of the given sequence. *)
 
+val of_vec : 'a OLinq_vec.t -> ('a, [`Any]) t
+
 val of_queue : 'a Queue.t -> ('a, [`Any]) t
 
 val of_stack : 'a Stack.t -> ('a, [`Any]) t
@@ -107,7 +118,7 @@ val of_multimap : ('a, 'b list) M.t -> ('a * 'b, [`Any]) t
 
 (** {6 Execution} *)
 
-val run : ?limit:int -> ('a, _) t -> 'a sequence
+val run : ?limit:int -> ('a, _) t -> 'a Iterable.t
 (** Execute the query, possibly returning an error if things go wrong
     @param limit max number of values to return *)
 
@@ -115,11 +126,17 @@ val run_list : ?limit:int -> ('a, _) t -> 'a list
 
 val run_array : ?limit:int -> ('a, _) t -> 'a array
 
+val run_vec : ?limit:int -> ('a, _) t -> 'a OLinq_vec.t
+
 val run1 : ('a, [`One]) t -> 'a
 (** Run the query and return the only value *)
 
+val run_head : ('a, _) t -> 'a option
+(** Return first result *)
+
 val run1_exn : ('a, _) t -> 'a
-(** @raise Not_found if the query contains 0 element *)
+(** unsafe shortcut for {!run_head}.
+    @raise Not_found if the query contains 0 element *)
 
 (** {6 Basics} *)
 
@@ -395,8 +412,6 @@ val opt_unwrap_exn : ('a option, 'card) t -> ('a, 'card) t
    with UnwrapNone -> true)
 *)
 
-(* TODO: maybe a small vec type for efficient reflection *)
-
 (** {6 Infix} *)
 
 module Infix : sig
@@ -408,7 +423,7 @@ end
 
 (** {6 Adapters} *)
 
-val reflect_seq : ('a, _) t -> ('a sequence, [>`One]) t
+val reflect_vec : ('a, _) t -> ('a OLinq_vec.t, [>`One]) t
 (** [reflect_seq q] evaluates all values in [q] and returns a sequence
     of all those values. Also blocks optimizations *)
 

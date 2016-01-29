@@ -47,7 +47,7 @@ let enter_tuple_index =
   L.flat_map_seq
     (function
       | `Tuple l -> (fun yield -> List.iteri (fun i x -> yield (i,x)) l)
-      | _ -> Sequence.empty)
+      | _ -> (fun _ -> ()))
 
 let map_list f j = match j with
   | `List l ->

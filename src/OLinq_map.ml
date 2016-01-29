@@ -14,6 +14,7 @@ type ('a, +'b) t = {
   get_exn : 'a -> 'b;
   iter : ('a -> 'b -> unit) -> unit;
   fold : 'c. ('c -> 'a -> 'b -> 'c) -> 'c -> 'c;
+  choose: (unit -> ('a * 'b) option);
 }
 
 type ('a, +'b) map = ('a, 'b) t
@@ -33,9 +34,9 @@ let to_seq m yield = m.iter (fun k v -> yield (k,v))
 let to_seq_multimap m yield =
   m.iter (fun k vs -> List.iter (fun v -> yield (k,v)) vs)
 
-let get_seq key m = match get m key with
-  | None -> Sequence.empty
-  | Some x -> Sequence.return x
+let get_seq key m yield = match get m key with
+  | None -> ()
+  | Some x -> yield x
 
 let iter m = m.iter
 
@@ -76,6 +77,10 @@ module Build = struct
       get_exn = (fun k -> H.find tbl k);
       fold = (fun f acc -> H.fold (fun k v acc -> f acc k v) tbl acc);
       iter = (fun k -> H.iter (fun key v -> k key v) tbl);
+      choose = (fun () ->
+        let r = ref None in
+        (try H.iter (fun k v -> r := Some (k,v); raise Exit) tbl with Exit -> ());
+        !r);
     } in
     { cur;
       add = (fun k v -> H.replace tbl k v);
@@ -103,6 +108,7 @@ module Build = struct
           M.fold
             (fun key set acc -> f acc key set) map acc);
       iter = (fun k -> M.iter k map);
+      choose = (fun () -> try Some (M.choose map) with Not_found -> None);
     } in
     let map = ref M.empty in
     let cur () = of_map !map in
@@ -172,7 +178,12 @@ let map f m = {
   fold = (fun f' acc ->
       m.fold (fun acc x y -> f' acc x (f y)) acc
     );
+  choose = (fun () ->
+    match m.choose () with None -> None | Some (k,v) -> Some (k, f v)
+  );
 }
+
+let choose m = m.choose()
 
 let to_rev_list m = m.fold (fun acc k v -> (k,v) :: acc) []
 

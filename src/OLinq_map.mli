@@ -16,6 +16,7 @@ type ('a, +'b) t = private {
   get_exn : 'a -> 'b;
   iter : ('a -> 'b -> unit) -> unit;
   fold : 'c. ('c -> 'a -> 'b -> 'c) -> 'c -> 'c;
+  choose: (unit -> ('a * 'b) option);
 }
 (** Map from keys of type ['a] to values of type ['b]
     {b the type might change},
@@ -52,6 +53,8 @@ val get_seq : 'a -> ('a, 'b) t -> 'b sequence
 
 val iter : ('a,'b) t -> ('a -> 'b -> unit) -> unit
 (** View a multimap as a proper collection *)
+
+val choose : ('a, 'b) t -> ('a * 'b) option
 
 (** {2 Build}
 
