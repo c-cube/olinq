@@ -150,8 +150,6 @@ val run1 : ('a, [`One]) t -> 'a
 val run1_exn : ('a, _) t -> 'a
 (** @raise Not_found if the query contains 0 element *)
 
-(* TODO: optimizations might be done directly by smart constructors *)
-
 (** {6 Basics} *)
 
 val map : ('a -> 'b) -> ('a, 'card) t -> ('b, 'card) t
@@ -323,7 +321,6 @@ val (<*>) : ('a -> 'b, 'card) t -> ('a, 'card) t -> ('b, 'card) t
 
 val flat_map : ('a -> ('b, _) t) -> ('a,_) t -> ('b, [`Any]) t
 (** Use the result of a query to build another query and immediately run it. *)
-(* TODO rename into flat_map *)
 
 val (>>=) : ('a, _) t -> ('a -> ('b, _) t) -> ('b, [`Any]) t
 (** Infix version of {!bind} *)
