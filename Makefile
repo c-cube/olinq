@@ -31,6 +31,18 @@ qtest-gen:
 clean-generated:
 	rm **/*.{mldylib,mlpack,mllib} myocamlbuild.ml -f
 
+test: qtest-gen
+	ocamlbuild $(OPTIONS) -package ppx_deriving.show -package sequence \
+	  -package oUnit -package QTest2Lib -I src -I qtest qtest/run_qtest.native
+	./run_qtest.native
+
+DOCDIR=olinq.docdir
+
+doc:
+	mkdir -p $(DOCDIR)
+	ocamldoc -html -d $(DOCDIR) src/*.mli
+
+# FIXME update
 VERSION=$(shell awk '/^Version:/ {print $$2}' _oasis)
 
 update_next_tag:
@@ -44,4 +56,4 @@ watch:
 		make ; \
 	done
 
-.PHONY: all clean qtest-gen qtest-clean update_next_tag
+.PHONY: all clean qtest-gen qtest-clean test update_next_tag doc
