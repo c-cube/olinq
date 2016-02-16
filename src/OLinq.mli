@@ -149,15 +149,29 @@ val flat_map_seq : ('a -> 'b sequence) -> ('a, _) t -> ('b, [`Any]) t
 val flat_map_l : ('a -> 'b list) -> ('a, _) t -> ('b, [`Any]) t
 (** map each element to a collection and flatten the result *)
 
-val flatten : ('a list, _) t -> ('a, [`Any]) t
+val flatten_list : ('a list, _) t -> ('a, [`Any]) t
 
 val flatten_seq : ('a sequence,_) t -> ('a, [`Any]) t
+
+val flatten_map : (('a, 'b) M.t, _) t -> ('a * 'b, [`Any]) t
+
+val flatten_multimap : (('a, 'b list) M.t, _) t -> ('a * 'b, [`Any]) t
 
 val take : int -> ('a, _) t -> ('a, [`Any]) t
 (** Take at most [n] elements *)
 
+(*$Q & ~small:(fun (i,j,lim) -> abs (i-j) + lim)
+  Q.(triple small_int small_int small_int) (fun (i,j,lim) -> \
+    ((i -- j) |> take lim |> size |> run1) <= lim)
+*)
+
 val take1 : ('a, _) t -> ('a, [>`AtMostOne]) t
 (** Specialized version of {!take} that keeps only the first element *)
+
+(*$Q & ~small:(fun (i,j) -> abs (i-j))
+  Q.(pair small_int small_int) (fun (i,j) -> \
+    ((i -- j) |> take1 |> size |> run1) <= 1)
+*)
 
 val take_while : ('a -> bool) -> ('a, _) t -> ('a, [`Any]) t
 (** Take elements while they satisfy a predicate *)
@@ -166,9 +180,21 @@ val sort : ?cmp:'a ord -> unit -> ('a, [`Any]) t -> ('a, [`Any]) t
 (** Sort items by the given comparison function. Only meaningful when
     there are potentially many elements *)
 
+(*$Q
+  Q.(list small_int) (fun l -> \
+    let rec sorted = function [] | [_] -> true | x::y::l -> x<=y && sorted (y::l) in \
+    of_list l |> sort () |> run_list |> sorted)
+*)
+
 val sort_by : ?cmp:'b ord -> ('a -> 'b) -> ('a, [`Any]) t -> ('a, [`Any]) t
 (** [sort_by proj c] sorts the collection [c] by projecting elements using
     [proj], then using [cmp] to order them *)
+
+(*$Q
+  Q.(list (pair small_int float)) (fun l -> \
+    let rec sorted = function [] | [_] -> true | x::y::l -> snd x<=snd y && sorted (y::l) in \
+    of_list l |> sort_by snd |> run_list |> sorted)
+*)
 
 val distinct : ?cmp:'a ord -> unit -> ('a, [`Any]) t -> ('a, [`Any]) t
 (** Remove duplicate elements from the input collection.
@@ -186,6 +212,12 @@ val group_by : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
 val group_by' : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
   ('a -> 'b) -> ('a, [`Any]) t -> ('b * 'a list, [`Any]) t
 
+(*$= & ~printer:[%show: (int * int list) list]
+  [0, [2; 4; 10; 100]; 1, [3; 7; 11; 19]] \
+  (group_by' (fun x->x mod 2) (of_list [2;3;4;7;10;11;19;100]) \
+   |> run_list |> List.map (fun (x,y) -> x, lsort y) |> lsort)
+*)
+
 val count :
   ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
   unit -> ('a, [`Any]) t -> (('a, int) M.t, [>`One]) t
@@ -196,6 +228,11 @@ val count' :
   ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
   unit -> ('a, [`Any]) t -> ('a * int, [`Any]) t
 
+(*$= & ~printer:[%show: (char * int) list]
+  ['a', 3; 'b', 2; 'c', 1] \
+  (count' () (of_list ['a'; 'b'; 'b'; 'a'; 'c'; 'a']) |> run_list |> lsort)
+*)
+
 val fold : ('b -> 'a -> 'b) -> 'b -> ('a, _) t -> ('b, [>`One]) t
 (** Fold over the collection *)
 
@@ -203,7 +240,14 @@ val is_empty : ('a, [<`AtMostOne | `Any]) t -> (bool, [>`One]) t
 
 val sum : (int, [<`AtMostOne | `Any]) t -> (int, [>`One]) t
 
+(*$Q
+  Q.(list small_int) (fun l -> \
+    (of_list l |> sum |> run1) = (List.fold_left (+) 0 l))
+*)
+
 val contains : ?eq:'a equal -> 'a -> ('a, _) t -> (bool, [>`One]) t
+(** [contains x q] returns [true] if [x] is among the elements returned
+    by [q]. Careful, this runs [q] and might be slow! *)
 
 val average : (int, _) t -> (int, [>`One]) t
 val max : (int, _) t -> (int, [>`One]) t
@@ -259,22 +303,48 @@ val group_join' : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
 val product : ('a, _) t -> ('b,_) t -> ('a * 'b, [`Any]) t
 (** Cartesian product *)
 
+(*$=
+  [1, false; 1, true; 2, false; 2, true; 3, false; 3, true] \
+  (product (1 -- 3) (of_list [true; false]) |> run_list |> lsort)
+*)
+
 val append : ('a,_) t -> ('a,_) t -> ('a, [`Any]) t
 (** Append two collections together *)
 
-val inter : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash -> unit ->
-  ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
+(*$=
+  [1;2;3;4;5;6;7;8;9;10] (append (1--3) (4--10) |> run_list)
+*)
+
+val inter :
+  ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
+  unit -> ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
 (** Intersection of two collections. Each element will occur at most once
     in the result *)
 
-val union : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash -> unit ->
-  ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
+val union :
+  ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
+  unit -> ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
 (** Union of two collections. Each element will occur at most once
     in the result *)
 
-val diff : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash -> unit ->
-  ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
+val diff :
+  ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
+  unit -> ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
 (** Set difference *)
+
+(*$=
+  [1;2;8;9;10] (diff () (1--10) (3--7) |> run_list)
+*)
+
+val subset :
+  ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
+  unit -> ('a,_) t -> ('a,_) t -> (bool,[`One]) t
+(** [subset () a b] returns [true] if all elements of [a] belong to [b] *)
+
+(*$T
+  subset () (2 -- 4) (1 -- 4) |> run1
+  not (subset () (1 -- 4) (2 -- 10) |> run1)
+*)
 
 (** {6 Tuple and Options} *)
 
@@ -308,7 +378,7 @@ val flat_map : ('a -> ('b, _) t) -> ('a,_) t -> ('b, [`Any]) t
 (** Use the result of a query to build another query and immediately run it. *)
 
 val (>>=) : ('a, _) t -> ('a -> ('b, _) t) -> ('b, [`Any]) t
-(** Infix version of {!bind} *)
+(** Infix version of {!flat_map} *)
 
 (** {6 Misc} *)
 
@@ -319,13 +389,11 @@ exception UnwrapNone
 val opt_unwrap_exn : ('a option, 'card) t -> ('a, 'card) t
 (** @raise UnwrapNone if some option is None *)
 
-val reflect_seq : ('a, _) t -> ('a sequence, [>`One]) t
-(** [reflect q] evaluates all values in [q] and returns a sequence
-    of all those values. Also blocks optimizations *)
-
-val reflect_l : ('a, _) t -> ('a list, [>`One]) t
-(** [reflect q] evaluates all values in [q] and returns a list
-    of all those values. Also blocks optimizations *)
+(*$T
+  [1;2;3] = (opt_unwrap_exn (of_list [Some 1; Some 2; Some 3]) |> run_list)
+  (try ignore (opt_unwrap_exn (of_list [Some 1; None; Some 2]) |> run_list); false \
+   with UnwrapNone -> true)
+*)
 
 (* TODO: maybe a small vec type for efficient reflection *)
 
@@ -340,16 +408,24 @@ end
 
 (** {6 Adapters} *)
 
-val to_seq : ('a,_) t  -> ('a sequence, [>`One]) t
-(** Build a (re-usable) sequence of elements, which can then be
-    converted into other structures. Synonym to {!reflect_seq}.  *)
+val reflect_seq : ('a, _) t -> ('a sequence, [>`One]) t
+(** [reflect_seq q] evaluates all values in [q] and returns a sequence
+    of all those values. Also blocks optimizations *)
 
-val to_hashtbl : (('a * 'b), _) t -> (('a, 'b) Hashtbl.t, [>`One]) t
+val reflect_list : ('a, _) t -> ('a list, [>`One]) t
+(** [reflect_list q] evaluates all values in [q] and returns a list
+    of all those values. Also blocks optimizations *)
+
+(*$=
+  [1;2;3;4] (of_list [1;2;3;4] |> reflect_list |> run1)
+*)
+
+val reflect_hashtbl : (('a * 'b), _) t -> (('a, 'b) Hashtbl.t, [>`One]) t
 (** Build a hashtable from the collection *)
 
-val to_queue : ('a,_) t -> ('a Queue.t, [>`One]) t
+val reflect_queue : ('a,_) t -> ('a Queue.t, [>`One]) t
 
-val to_stack : ('a,_) t -> ('a Stack.t, [>`One]) t
+val reflect_stack : ('a,_) t -> ('a Stack.t, [>`One]) t
 
 module AdaptSet(S : Set.S) : sig
   val of_set : S.t -> (S.elt, [`Any]) t

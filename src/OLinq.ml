@@ -110,6 +110,13 @@ module ImplemSetOps = struct
     let map = M.Build.get build in
     (* output elements of [c1] not in [map] *)
     Sequence.filter (fun x -> not (M.mem map x)) c1
+
+  let do_subset ~src c1 c2 =
+    let build = M.Build.of_src src in
+    c2 (fun x -> M.Build.add build x ());
+    let map = M.Build.get build in
+    let res = Sequence.for_all (M.mem map) c1 in
+    Sequence.return res
 end
 
 (** {2 Query operators} *)
@@ -136,10 +143,11 @@ type (_, _) unary =
   | Count : 'a M.Build.src -> ('a, ('a, int) M.t) unary
   | Lazy : ('a lazy_t, 'a) unary
 
-type set_op =
-  | Union
-  | Inter
-  | Diff
+type (_,_) set_op =
+  | Union : ('a,'a) set_op
+  | Inter : ('a,'a) set_op
+  | Diff : ('a,'a) set_op
+  | Subset : ('a, bool) set_op
 
 type (_, _, _) binary =
   | App : ('a -> 'b, 'a, 'b) binary
@@ -152,8 +160,8 @@ type (_, _, _) binary =
   | Product : ('a, 'b, ('a*'b)) binary
   | Append : ('a, 'a, 'a) binary
   | SetOp :
-      set_op * 'a M.Build.src
-      -> ('a, 'a, 'a) binary
+      ('a, 'b) set_op * 'a M.Build.src
+      -> ('a, 'a, 'b) binary
 
 (* TODO deal with several possible containers as a 'a t,
    including seq,vector, M... *)
@@ -238,6 +246,7 @@ let _do_binary : type a b c. (a, b, c) binary -> a sequence -> b sequence -> c s
     | SetOp (Inter,src) -> ImplemSetOps.do_inter ~src c1 c2
     | SetOp (Union,src) -> ImplemSetOps.do_union ~src c1 c2
     | SetOp (Diff,src) -> ImplemSetOps.do_diff ~src c1 c2
+    | SetOp (Subset,src) -> ImplemSetOps.do_subset ~src c1 c2
 
 let rec _run : type a. a t_ -> a sequence
   = fun q -> match q with
@@ -316,7 +325,11 @@ let flat_map_l f q =
 
 let flatten_seq q = flat_map_seq id_ q
 
-let flatten q = flat_map_seq Sequence.of_list q
+let flatten_list q = flat_map_seq Sequence.of_list q
+
+let flatten_map q = flat_map_seq M.to_seq q
+
+let flatten_multimap q = flat_map_seq M.to_seq_multimap q
 
 let rec take
 : type a. int -> a t_ -> a t_
@@ -457,6 +470,10 @@ let diff ?cmp ?eq ?hash () q1 q2 =
   let build = M.Build.src_of_args ?cmp ?eq ?hash () in
   Binary (SetOp (Diff, build), q1, q2)
 
+let subset ?cmp ?eq ?hash () q1 q2 =
+  let build = M.Build.src_of_args ?cmp ?eq ?hash () in
+  Binary (SetOp (Subset, build), q1, q2)
+
 let map_fst f q = map (fun (x,y) -> f x, y) q
 let map_snd f q = map (fun (x,y) -> x, f y) q
 
@@ -496,10 +513,6 @@ let (>>=) x f = Bind (f, x)
 
 let lazy_ q = Unary (Lazy, q)
 
-let reflect_seq q = Reflect q
-
-let reflect_l q = Unary (Map Sequence.to_list, Reflect q)
-
 (** {6 Others} *)
 
 let rec choose
@@ -527,15 +540,17 @@ end
 
 (** {6 Adapters} *)
 
-let to_seq q = reflect_seq q
+let reflect_seq q = Reflect q
 
-let to_hashtbl q =
+let reflect_list q = Unary (Map Sequence.to_list, Reflect q)
+
+let reflect_hashtbl q =
   Unary (Map (fun c -> Sequence.to_hashtbl c), Reflect q)
 
-let to_queue q =
+let reflect_queue q =
   Unary (Map (fun c -> let q = Queue.create() in Sequence.to_queue q c; q), Reflect q)
 
-let to_stack q =
+let reflect_stack q =
   Unary (Map (fun c -> let s = Stack.create () in Sequence.to_stack s c; s), Reflect q)
 
 module AdaptSet(S : Set.S) = struct
