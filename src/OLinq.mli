@@ -41,48 +41,16 @@ type 'a ord = 'a -> 'a -> int
 type 'a hash = 'a -> int
 type 'a or_error = [`Ok of 'a | `Error of string ]
 
+(* some helpers *)
+(*$inject
+  let lsort l = List.sort Pervasives.compare l
+  let llsort l = l |> List.map lsort |> lsort
+
+*)
+
+
 (** {2 Polymorphic Maps} *)
-module PMap : sig
-  type ('a, +'b) t
-
-  val get : ('a,'b) t -> 'a -> 'b option
-
-  val size : (_,_) t -> int
-
-  val to_seq : ('a, 'b) t -> ('a * 'b) sequence
-
-  val to_list : ('a, 'b) t -> ('a * 'b) list
-
-  val map : ('b -> 'c) -> ('a, 'b) t -> ('a, 'c) t
-  (** Transform values *)
-
-  val reverse : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash -> unit ->
-    ('a,'b) t -> ('b,'a list) t
-  (** Reverse relation of the map, as a multimap *)
-
-  val reverse_multimap : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash -> unit ->
-    ('a,'b list) t -> ('b,'a list) t
-  (** Reverse relation of the multimap *)
-
-  val fold : ('acc -> 'a -> 'b -> 'acc) -> 'acc -> ('a,'b) t -> 'acc
-  (** Fold on the items of the map *)
-
-  val fold_multimap : ('acc -> 'a -> 'b -> 'acc) -> 'acc ->
-    ('a,'b list) t -> 'acc
-  (** Fold on the items of the multimap *)
-
-  val get_seq : 'a -> ('a, 'b) t -> 'b sequence
-  (** Select a key from a map and wrap into sequence *)
-
-  val iter : ('a,'b) t -> ('a*'b) sequence
-  (** View a multimap as a proper collection *)
-
-  val flatten : ('a,'b sequence) t -> ('a*'b) sequence
-  (** View a multimap as a collection of individual key/value pairs *)
-
-  val flatten_l : ('a,'b list) t -> ('a*'b) sequence
-  (** View a multimap as a list of individual key/value pairs *)
-end
+module M = OLinq_map
 
 (** {2 Main Type} *)
 
@@ -131,8 +99,11 @@ val of_stack : 'a Stack.t -> ('a, [`Any]) t
 val of_string : string -> (char, [`Any]) t
 (** Traverse the characters of the string *)
 
-val of_pmap : ('a, 'b) PMap.t -> ('a * 'b, [`Any]) t
-(** [of_pmap m] yields each binding of [m] *)
+val of_map : ('a, 'b) M.t -> ('a * 'b, [`Any]) t
+(** [of_map m] yields each binding of [m] *)
+
+val of_multimap : ('a, 'b list) M.t -> ('a * 'b, [`Any]) t
+(** [of_multimap m] yields each single binding of [m] *)
 
 (** {6 Execution} *)
 
@@ -206,7 +177,7 @@ val distinct : ?cmp:'a ord -> unit -> ('a, [`Any]) t -> ('a, [`Any]) t
 (** {6 Aggregation} *)
 
 val group_by : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
-  ('a -> 'b) -> ('a, [`Any]) t -> (('b,'a list) PMap.t, [>`One]) t
+  ('a -> 'b) -> ('a, [`Any]) t -> (('b,'a list) M.t, [>`One]) t
 (** [group_by f] takes a collection [c] as input, and returns
     a multimap [m] such that for each [x] in [c],
     [x] occurs in [m] under the key [f x]. In other words, [f] is used
@@ -215,22 +186,18 @@ val group_by : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
 val group_by' : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
   ('a -> 'b) -> ('a, [`Any]) t -> ('b * 'a list, [`Any]) t
 
-val count : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
-  unit -> ('a, [`Any]) t -> (('a, int) PMap.t, [>`One]) t
+val count :
+  ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
+  unit -> ('a, [`Any]) t -> (('a, int) M.t, [>`One]) t
 (** [count c] returns a map from elements of [c] to the number
     of time those elements occur. *)
 
-val count' : ?cmp:'a ord -> unit -> ('a, [`Any]) t -> ('a * int, [`Any]) t
+val count' :
+  ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
+  unit -> ('a, [`Any]) t -> ('a * int, [`Any]) t
 
 val fold : ('b -> 'a -> 'b) -> 'b -> ('a, _) t -> ('b, [>`One]) t
 (** Fold over the collection *)
-
-val reduce :
-  ('a -> 'b) -> ('a -> 'b -> 'b) -> ('b -> 'c) ->
-  ('a,_) t -> ('c, [>`One]) t
-(** [reduce start mix stop q] uses [start] on the first element of [q],
-    and combine the result with following elements using [mix]. The final
-    value is transformed using [stop]. *)
 
 val is_empty : ('a, [<`AtMostOne | `Any]) t -> (bool, [>`One]) t
 
@@ -262,10 +229,32 @@ val join : ?cmp:'key ord -> ?eq:'key equal -> ?hash:'key hash ->
 
 val group_join : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
   ('b -> 'a) -> ('a,_) t -> ('b,_) t ->
-  (('a, 'b list) PMap.t, [>`One]) t
+  (('a, 'b list) M.t, [>`One]) t
 (** [group_join key2] associates to every element [x] of
     the first collection, all the elements [y] of the second
-    collection such that [eq x (key y)] *)
+    collection such that [eq x (key y)]. Elements of the first
+    collections without corresponding values in the second one
+    are mapped to [[]] *)
+
+val group_join' : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
+  ('b -> 'a) -> ('a,_) t -> ('b,_) t ->
+  ('a * 'b list, [`Any]) t
+(** Same as {!group_join}, but then flatten the map *)
+
+(*$R
+  let res =
+    group_join' fst
+      (of_list [1;2;3])
+      (of_list [1, "1"; 1, "one"; 2, "two"; 4, "four"])
+    |> map (fun (x,y) -> x, lsort (List.map snd y))
+    |> run_list
+    |> lsort
+  in
+  assert_equal
+    ~printer:[%show: (int * string list) list]
+    [1, ["1"; "one"]; 2, ["two"]; 3, []; 4, []]
+    res
+*)
 
 val product : ('a, _) t -> ('b,_) t -> ('a * 'b, [`Any]) t
 (** Cartesian product *)
@@ -290,10 +279,6 @@ val diff : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash -> unit ->
 (** {6 Tuple and Options} *)
 
 (** Specialized projection operators *)
-
-val fst : ('a * 'b, 'card) t -> ('a, 'card) t
-
-val snd : ('a * 'b, 'card) t -> ('b, 'card) t
 
 val map_fst : ('a -> 'b) -> ('a * 'c, 'card) t -> ('b * 'c, 'card) t
 
@@ -374,7 +359,6 @@ end
 
 module AdaptMap(M : Map.S) : sig
   val of_map : 'a M.t -> (M.key * 'a, [`Any]) t
-  val to_pmap : 'a M.t -> (M.key, 'a) PMap.t
   val reflect : (M.key * 'a, _) t -> ('a M.t, [`One]) t
   val run : (M.key * 'a, _) t -> 'a M.t
 end

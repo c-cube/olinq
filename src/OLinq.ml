@@ -11,187 +11,7 @@ type 'a or_error = [`Ok of 'a | `Error of string ]
 
 let id_ x = x
 
-module PMap = struct
-  type ('a, +'b) t = {
-    is_empty : unit -> bool;
-    size : unit -> int; (* Number of keys *)
-    get : 'a -> 'b option;
-    fold : 'c. ('c -> 'a -> 'b -> 'c) -> 'c -> 'c;
-    to_seq : ('a * 'b) sequence;
-  }
-
-  let get m x = m.get x
-  let mem m x = match m.get x with
-    | None -> false
-    | Some _ -> true
-  let to_seq m = m.to_seq
-  let fold f acc m = m.fold f acc
-  let size m = m.size ()
-
-  type ('a, 'b) build = {
-    mutable cur : ('a, 'b) t;
-    add : 'a -> 'b -> unit;
-    update : 'a -> ('b option -> 'b option) -> unit;
-  }
-
-  let build_get b = b.cur
-  let add b x y = b.add x y
-  let update b f = b.update f
-
-  (* careful to use this map linearly *)
-  let make_hash (type key) ?(eq=(=)) ?(hash=Hashtbl.hash) () =
-    let module H = Hashtbl.Make(struct
-        type t = key
-        let equal = eq
-        let hash = hash
-      end) in
-    (* build table *)
-    let tbl = H.create 32 in
-    let cur = {
-      is_empty = (fun () -> H.length tbl = 0);
-      size = (fun () -> H.length tbl);
-      get = (fun k ->
-          try Some (H.find tbl k)
-          with Not_found -> None);
-      fold = (fun f acc -> H.fold (fun k v acc -> f acc k v) tbl acc);
-      to_seq = (fun k -> H.iter (fun key v -> k (key,v)) tbl);
-    } in
-    { cur;
-      add = (fun k v -> H.replace tbl k v);
-      update = (fun k f ->
-          match (try f (Some (H.find tbl k)) with Not_found -> f None) with
-          | None -> H.remove tbl k
-          | Some v' -> H.replace tbl k v');
-    }
-
-  let make_cmp (type key) ?(cmp=Pervasives.compare) () =
-    let module M = Sequence.Map.Make(struct
-        type t = key
-        let compare = cmp
-      end) in
-    let map = ref M.empty in
-    let cur = {
-      is_empty = (fun () -> M.is_empty !map);
-      size = (fun () -> M.cardinal !map);
-      get = (fun k ->
-          try Some (M.find k !map)
-          with Not_found -> None);
-      fold = (fun f acc ->
-          M.fold
-            (fun key set acc -> f acc key set) !map acc
-        );
-      to_seq = (fun k -> M.to_seq !map k);
-    } in
-    {
-      cur;
-      add = (fun k v -> map := M.add k v !map);
-      update = (fun k f ->
-          match (try f (Some (M.find k !map)) with Not_found -> f None) with
-          | None -> map := M.remove k !map
-          | Some v' -> map := M.add k v' !map);
-    }
-
-  type 'a build_method =
-    | FromCmp of 'a ord
-    | FromHash of 'a equal * 'a hash
-    | Default
-
-  let make ?(build=Default) () = match build with
-    | Default -> make_hash ()
-    | FromCmp cmp -> make_cmp ~cmp ()
-    | FromHash (eq,hash) -> make_hash ~eq ~hash ()
-
-  (* choose a build method from the optional arguments *)
-  let _make_build ?cmp ?eq ?hash () =
-    let _maybe default o = match o with
-      | Some x -> x
-      | None -> default
-    in
-    match eq, hash with
-    | Some _, _
-    | _, Some _ ->
-        FromHash ( _maybe (=) eq, _maybe Hashtbl.hash hash)
-    | _ ->
-        match cmp with
-        | Some f -> FromCmp f
-        | _ -> Default
-
-  let multimap_of_seq ?(build=make ()) seq =
-    seq (fun (k,v) ->
-        build.update k (function
-            | None -> Some [v]
-            | Some l -> Some (v::l)));
-    build.cur
-
-  let count_of_seq ?(build=make ()) seq =
-    seq (fun x ->
-        build.update x
-          (function
-            | None -> Some 1
-            | Some n -> Some (n+1)));
-    build.cur
-
-  (* map values *)
-  let map f m = {
-    is_empty = m.is_empty;
-    size = m.size;
-    get = (fun k -> match m.get k with
-        | None -> None
-        | Some v -> Some (f v)
-      );
-    to_seq = Sequence.map (fun (x,y) -> x, f y) m.to_seq;
-    fold = (fun f' acc ->
-        m.fold (fun acc x y -> f' acc x (f y)) acc
-      );
-  }
-
-  let to_list m = Sequence.to_rev_list m.to_seq
-
-  let reverse_ ~build m =
-    let build = make ~build () in
-    let seq = Sequence.map (fun (x,y) -> y,x) (to_seq m) in
-    multimap_of_seq ~build seq
-
-  let reverse_multimap_ ~build m =
-    let build = make ~build () in
-    let seq = to_seq m in
-    let seq = Sequence.flat_map
-        (fun (x,l) -> Sequence.map (fun y -> y,x) (Sequence.of_list l)
-        ) seq
-    in
-    multimap_of_seq ~build seq
-
-  let reverse ?cmp ?eq ?hash () m =
-    let build = _make_build ?cmp ?eq ?hash () in
-    reverse_ ~build m
-
-  let reverse_multimap  ?cmp ?eq ?hash () m =
-    let build = _make_build ?cmp ?eq ?hash () in
-    reverse_multimap_ ~build m
-
-  let fold_multimap f acc m =
-    m.fold (fun acc x l -> List.fold_left (fun acc y -> f acc x y) acc l) acc
-
-  let get_seq key m = match get m key with
-    | None -> Sequence.empty
-    | Some x -> Sequence.return x
-
-  let iter m = m.to_seq
-
-  let flatten m =
-    let seq = Sequence.flat_map
-        (fun (k,v) -> Sequence.map (fun v' -> k,v') v)
-        m.to_seq
-    in
-    seq
-
-  let flatten_l m =
-    let seq = Sequence.flatMap
-        (fun (k,v) -> Sequence.map (fun v' -> k,v') (Sequence.of_list v))
-        m.to_seq
-    in
-    seq
-end
+module M = OLinq_map
 
 type 'a search_result =
   | SearchContinue
@@ -201,12 +21,12 @@ type ('a,'b,'key,'c) join_descr = {
   join_key1 : 'a -> 'key;
   join_key2 : 'b -> 'key;
   join_merge : 'key -> 'a -> 'b -> 'c option;
-  join_build : 'key PMap.build_method;
+  join_build_src : 'key M.Build.src;
 }
 
 type ('a,'b) group_join_descr = {
   gjoin_proj : 'b -> 'a;
-  gjoin_build : 'a PMap.build_method;
+  gjoin_build_src : 'a M.Build.src;
 }
 
 type ('a,'b) search_descr = {
@@ -232,81 +52,72 @@ module ImplemSetOps = struct
   let do_join ~join c1 c2 =
     let build1 =
       let seq = Sequence.map (fun x -> join.join_key1 x, x) c1 in
-      PMap.multimap_of_seq ~build:(PMap.make ~build:join.join_build ()) seq
+      M.of_seq ~src:join.join_build_src seq
     in
-    let l = Sequence.fold
+    let l =
+      Sequence.fold
         (fun acc y ->
            let key = join.join_key2 y in
-           match PMap.get build1 key with
+           match M.get build1 key with
            | None -> acc
            | Some l1 ->
                List.fold_left
                  (fun acc x -> match join.join_merge key x y with
                     | None -> acc
-                    | Some res -> res::acc
-                 ) acc l1
-        ) [] c2
+                    | Some res -> res::acc)
+                 acc l1)
+        [] c2
     in
     Sequence.of_list l
 
   let do_group_join ~gjoin c1 c2 =
-    let build = PMap.make ~build:gjoin.gjoin_build () in
-    c1 (fun x -> PMap.add build x []);
+    let build = M.Build.of_src gjoin.gjoin_build_src in
+    c1 (fun x -> M.Build.add build x []);
     c2
       (fun y ->
          (* project [y] into some element of [c1] *)
          let x = gjoin.gjoin_proj y in
-         PMap.update build x
-           (function
-             | None -> None   (* [x] not present, ignore! *)
-             | Some l -> Some (y::l)
-           )
-      );
-    PMap.build_get build
+         M.Build.update build x ~or_:[] ~f:(fun l -> y::l));
+    M.Build.get build
 
-  let do_union ~build c1 c2 =
-    let build = PMap.make ~build () in
-    c1 (fun x -> PMap.add build x ());
-    c2 (fun x -> PMap.add build x ());
-    let seq = PMap.to_seq (PMap.build_get build) in
-    Sequence.map fst seq
+  let do_union ~src c1 c2 =
+    let build = M.Build.of_src src  in
+    c1 (fun x -> M.Build.add build x ());
+    c2 (fun x -> M.Build.add build x ());
+    let m = M.Build.get build in
+    fun yield -> M.iter m (fun k _ -> yield k)
 
   type inter_status =
     | InterLeft
     | InterDone  (* already output *)
 
-  let do_inter ~build c1 c2 =
-    let build = PMap.make ~build () in
+  let do_inter ~src c1 c2 =
+    let build = M.Build.of_src src in
     let l = ref [] in
-    c1 (fun x -> PMap.add build x InterLeft);
+    c1 (fun x -> M.Build.add build x InterLeft);
     c2 (fun x ->
-        PMap.update build x
-          (function
-            | None -> Some InterDone
-            | Some InterDone as foo -> foo
-            | Some InterLeft ->
-                l := x :: !l;
-                Some InterDone
-          )
+        M.Build.update build x
+          ~or_:InterDone
+          ~f:(function
+            | InterDone -> InterDone
+            | InterLeft -> l := x :: !l; InterDone)
       );
     Sequence.of_list !l
 
-  let do_diff ~build c1 c2 =
-    let build = PMap.make ~build () in
-    c2 (fun x -> PMap.add build x ());
-    let map = PMap.build_get build in
+  let do_diff ~src c1 c2 =
+    let build = M.Build.of_src src in
+    c2 (fun x -> M.Build.add build x ());
+    let map = M.Build.get build in
     (* output elements of [c1] not in [map] *)
-    Sequence.filter (fun x -> not (PMap.mem map x)) c1
+    Sequence.filter (fun x -> not (M.mem map x)) c1
 end
 
 (** {2 Query operators} *)
 
 type (_, _) unary =
   | Map : ('a -> 'b) -> ('a, 'b) unary
-  | Filter : ('a -> bool) -> ('a, 'a ) unary
+  | Filter : ('a -> bool) -> ('a, 'a) unary
   | Fold : ('b -> 'a -> 'b) * 'b -> ('a, 'b) unary
-  | Reduce : ('a -> 'b) * ('a -> 'b -> 'b) * ('b -> 'c)
-    -> ('a, 'c) unary
   | Size : ('a, int) unary
   | Choose : ('a, 'a) unary
   | FilterMap : ('a -> 'b option) -> ('a, 'b) unary
@@ -318,9 +129,11 @@ type (_, _) unary =
   | Distinct : 'a ord -> ('a, 'a) unary
   | Search : ('a, 'b) search_descr -> ('a, 'b) unary
   | Contains : 'a equal * 'a -> ('a, bool) unary
-  | GroupBy : 'b PMap.build_method * ('a -> 'b)
-    -> ('a, ('b,'a list) PMap.t) unary
-  | Count : 'a PMap.build_method -> ('a, ('a, int) PMap.t) unary
+  | GroupBy :
+      'b M.Build.src
+      * ('a -> 'b)
+      -> ('a, ('b, 'a list) M.t) unary
+  | Count : 'a M.Build.src -> ('a, ('a, int) M.t) unary
   | Lazy : ('a lazy_t, 'a) unary
 
 type set_op =
@@ -330,17 +143,20 @@ type set_op =
 
 type (_, _, _) binary =
   | App : ('a -> 'b, 'a, 'b) binary
-  | Join : ('a, 'b, 'key, 'c) join_descr
-    -> ('a, 'b, 'c) binary
-  | GroupJoin : ('a, 'b) group_join_descr
-    -> ('a, 'b, ('a, 'b list) PMap.t) binary
+  | Join :
+      ('a, 'b, 'key, 'c) join_descr
+      -> ('a, 'b, 'c) binary
+  | GroupJoin :
+      ('a, 'b) group_join_descr
+      -> ('a, 'b, ('a, 'b list) M.t) binary
   | Product : ('a, 'b, ('a*'b)) binary
   | Append : ('a, 'a, 'a) binary
-  | SetOp : set_op * 'a PMap.build_method
-    -> ('a, 'a, 'a) binary
+  | SetOp :
+      set_op * 'a M.Build.src
+      -> ('a, 'a, 'a) binary
 
 (* TODO deal with several possible containers as a 'a t,
-   including seq,vector, PMap... *)
+   including seq,vector, M... *)
 
 (* type of queries that return values of type ['a] *)
 type 'a t_ =
@@ -374,20 +190,17 @@ let range i j = OfSeq (Sequence.int_range ~start:i ~stop:j)
 
 let (--) = range
 
-let of_seq seq =
-  OfSeq seq
+let of_seq seq = OfSeq seq
 
-let of_queue q =
-  OfSeq (Sequence.of_queue q)
+let of_queue q = OfSeq (Sequence.of_queue q)
 
-let of_stack s =
-  OfSeq (Sequence.of_stack s)
+let of_stack s = OfSeq (Sequence.of_stack s)
 
-let of_string s =
-  OfSeq (Sequence.of_str s)
+let of_string s = OfSeq (Sequence.of_str s)
 
-let of_pmap m =
-  OfSeq (PMap.to_seq m)
+let of_map m = OfSeq (M.to_seq m)
+
+let of_multimap m = OfSeq (M.to_seq_multimap m)
 
 (** {6 Execution} *)
 
@@ -397,18 +210,6 @@ let _do_unary : type a b. (a,b) unary -> a sequence -> b sequence
     | Map f -> Sequence.map f c
     | Filter p -> Sequence.filter p c
     | Fold (f, acc) -> Sequence.return (Sequence.fold f acc c)
-    | Reduce (start, mix, stop) ->
-        let acc =
-          Sequence.fold
-            (fun acc x -> match acc with
-               | None -> Some (start x)
-               | Some acc -> Some (mix x acc))
-            None c
-        in
-        begin match acc with
-          | None -> Sequence.empty
-          | Some x -> Sequence.return (stop x)
-        end
     | Size -> Sequence.return (Sequence.length c)
     | Choose -> ImplemSetOps.choose c
     | FilterMap f -> Sequence.filter_map f c
@@ -419,12 +220,12 @@ let _do_unary : type a b. (a,b) unary -> a sequence -> b sequence
     | SortBy (cmp,proj) -> Sequence.sort ~cmp:(fun a b -> cmp (proj a) (proj b)) c
     | Distinct cmp -> ImplemSetOps.distinct ~cmp c
     | Search obj -> Sequence.return (ImplemSetOps.search obj c)
-    | GroupBy (build,f) ->
+    | GroupBy (src,f) ->
         let seq = Sequence.map (fun x -> f x, x) c in
-        Sequence.return (PMap.multimap_of_seq ~build:(PMap.make ~build ()) seq)
+        Sequence.return (M.of_seq ~src seq)
     | Contains (eq, x) -> Sequence.return (Sequence.mem ~eq x c)
-    | Count build ->
-        Sequence.return (PMap.count_of_seq ~build:(PMap.make ~build ()) c)
+    | Count src ->
+        Sequence.return (M.count_seq ~src c)
     | Lazy -> Sequence.map Lazy.force c
 
 let _do_binary : type a b c. (a, b, c) binary -> a sequence -> b sequence -> c sequence
@@ -434,9 +235,9 @@ let _do_binary : type a b c. (a, b, c) binary -> a sequence -> b sequence -> c s
     | Product -> Sequence.product c1 c2
     | Append -> Sequence.append c1 c2
     | App -> Sequence.(c1 <*> c2)
-    | SetOp (Inter,build) -> ImplemSetOps.do_inter ~build c1 c2
-    | SetOp (Union,build) -> ImplemSetOps.do_union ~build c1 c2
-    | SetOp (Diff,build) -> ImplemSetOps.do_diff ~build c1 c2
+    | SetOp (Inter,src) -> ImplemSetOps.do_inter ~src c1 c2
+    | SetOp (Union,src) -> ImplemSetOps.do_union ~src c1 c2
+    | SetOp (Diff,src) -> ImplemSetOps.do_diff ~src c1 c2
 
 let rec _run : type a. a t_ -> a sequence
   = fun q -> match q with
@@ -534,16 +335,18 @@ let sort_by ?(cmp=Pervasives.compare) proj q = Unary (SortBy (cmp, proj), q)
 let distinct ?(cmp=Pervasives.compare) () q = Unary (Distinct cmp, q)
 
 let group_by ?cmp ?eq ?hash f q =
-  Unary (GroupBy (PMap._make_build ?cmp ?eq ?hash (),f), q)
+  let src = M.Build.src_of_args ?cmp ?eq ?hash () in
+  Unary (GroupBy (src, f), q)
 
 let group_by' ?cmp ?eq ?hash f q =
-  flat_map_seq PMap.iter (group_by ?cmp ?eq ?hash f q)
+  flat_map_seq M.to_seq (group_by ?cmp ?eq ?hash f q)
 
 let count ?cmp ?eq ?hash () q =
-  Unary (Count (PMap._make_build ?cmp ?eq ?hash ()), q)
+  let src = M.Build.src_of_args ?cmp ?eq ?hash () in
+  Unary (Count src, q)
 
-let count' ?cmp () q =
-  flat_map_seq PMap.iter (count ?cmp () q)
+let count' ?cmp ?eq ?hash () q =
+  flat_map_seq M.to_seq (count ?cmp ?eq ?hash () q)
 
 let rec fold
 : type a b. (a -> b -> a) -> a -> b t_ -> a t_
@@ -562,28 +365,16 @@ let rec size
 
 let sum q = Unary (Fold ((+), 0), q)
 
-let rec reduce
-: type a b c. (a -> b) -> (a -> b -> b) -> (b -> c) -> a t_ -> c t_
-= fun start mix stop q -> match q with
-  | Unary (Map f, q) ->
-      reduce
-        (fun x -> start (f x))
-        (fun x acc -> mix (f x) acc)
-        stop
-        q
-  | _ -> Unary (Reduce (start,mix,stop), q)
-
-let _avg_start x = (x,1)
-let _avg_mix x (y,n) = (x+y,n+1)
-let _avg_stop (x,n) = x/n
-
 let _lift_some f x y = match y with
   | None -> Some x
   | Some y -> Some (f x y)
 
-let max q = Unary (Reduce (id_, Pervasives.max, id_), q)
-let min q = Unary (Reduce (id_, Pervasives.min, id_), q)
-let average q = Unary (Reduce (_avg_start, _avg_mix, _avg_stop), q)
+let max q = Unary (Fold (Pervasives.max, min_int), q)
+let min q = Unary (Fold (Pervasives.min, max_int), q)
+let average q =
+  q
+  |> fold (fun (sum,num) x -> x+sum, num+1) (0,0)
+  |> map (fun (sum,num) -> sum/num)
 
 let is_empty q =
   Unary
@@ -629,41 +420,42 @@ let find_map f q =
 (** {6 Binary Operators} *)
 
 let join ?cmp ?eq ?hash join_key1 join_key2 ~merge q1 q2 =
-  let join_build = PMap._make_build ?eq ?hash ?cmp () in
+  let join_build_src = M.Build.src_of_args ?eq ?hash ?cmp () in
   let j = {
     join_key1;
     join_key2;
     join_merge=merge;
-    join_build;
+    join_build_src;
   } in
   Binary (Join j, q1, q2)
 
 let group_join ?cmp ?eq ?hash gjoin_proj q1 q2 =
-  let gjoin_build = PMap._make_build ?eq ?hash ?cmp () in
+  let gjoin_build_src = M.Build.src_of_args ?eq ?hash ?cmp () in
   let j = {
     gjoin_proj;
-    gjoin_build;
+    gjoin_build_src;
   } in
   Binary (GroupJoin j, q1, q2)
+
+let group_join' ?cmp ?eq ?hash gjoin_proj q1 q2 =
+  let q = group_join ?cmp ?eq ?hash gjoin_proj q1 q2 in
+  flat_map_seq M.to_seq q
 
 let product q1 q2 = Binary (Product, q1, q2)
 
 let append q1 q2 = Binary (Append, q1, q2)
 
 let inter ?cmp ?eq ?hash () q1 q2 =
-  let build = PMap._make_build ?cmp ?eq ?hash () in
+  let build = M.Build.src_of_args ?cmp ?eq ?hash () in
   Binary (SetOp (Inter, build), q1, q2)
 
 let union ?cmp ?eq ?hash () q1 q2 =
-  let build = PMap._make_build ?cmp ?eq ?hash () in
+  let build = M.Build.src_of_args ?cmp ?eq ?hash () in
   Binary (SetOp (Union, build), q1, q2)
 
 let diff ?cmp ?eq ?hash () q1 q2 =
-  let build = PMap._make_build ?cmp ?eq ?hash () in
+  let build = M.Build.src_of_args ?cmp ?eq ?hash () in
   Binary (SetOp (Diff, build), q1, q2)
-
-let fst q = map fst q
-let snd q = map snd q
 
 let map_fst f q = map (fun (x,y) -> f x, y) q
 let map_snd f q = map (fun (x,y) -> x, f y) q
@@ -760,14 +552,6 @@ module AdaptMap(M : Map.S) = struct
   let _to_seq m k = M.iter (fun x y -> k (x,y)) m
 
   let of_map map = OfSeq (_to_seq map)
-
-  let to_pmap m = {
-    PMap.get = (fun x -> try Some (M.find x m) with Not_found -> None);
-    PMap.size = (fun () -> M.cardinal m);
-    PMap.is_empty = (fun () -> M.is_empty m);
-    PMap.fold = (fun f acc -> M.fold (fun x y acc -> f acc x y) m acc);
-    PMap.to_seq = _to_seq m;
-  }
 
   let reflect q =
     let f c =
