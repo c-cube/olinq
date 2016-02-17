@@ -40,7 +40,7 @@ DOCDIR=olinq.docdir
 
 doc:
 	mkdir -p $(DOCDIR)
-	ocamldoc -html -d $(DOCDIR) src/*.mli
+	ocamldoc -I _build/src/ -html -d $(DOCDIR) src/*.mli
 
 # FIXME update
 VERSION=$(shell awk '/^Version:/ {print $$2}' _oasis)
