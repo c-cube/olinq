@@ -176,7 +176,7 @@ type 'a t_ =
   | Reflect : 'a t_ -> 'a sequence t_
 
 (* type of queries, with an additional phantom parameter *)
-type ('a, 'card) t = 'a t_ constraint 'card = [<`One | `AtMostOne | `Any]
+type ('a, +'card) t = 'a t_ constraint 'card = [<`One | `AtMostOne | `Any]
 
 type 'a t_any = ('a, [`Any]) t
 type 'a t_one = ('a, [`One]) t

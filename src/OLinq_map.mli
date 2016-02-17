@@ -109,6 +109,6 @@ val reverse_multimap : ?src:'b Build.src -> ('a,'b list) t -> ('b,'a list) t
 val flatten : ('a,'b sequence) t -> ('a*'b) sequence
 (** View a multimap as a collection of individual key/value pairs *)
 
-val flatten_l : ('a,'b list) t -> ('a*'b) sequence
+val flatten_l : ('a,'b list) t -> ('a * 'b) sequence
 (** View a multimap as a list of individual key/value pairs *)
 
