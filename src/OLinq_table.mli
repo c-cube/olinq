@@ -91,6 +91,9 @@ val num_rows : t -> int
 
 val num_cols : t -> int
 
+val size : t -> int
+(** Alias to {!num_rows} *)
+
 val names : t -> string array
 (** Access the column names.
     Should not be modified *)

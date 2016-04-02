@@ -99,7 +99,7 @@ module Row = struct
   let remove_index_l l a = assert false (* TODO *)
 
   let print out a =
-    Format.fprintf out "@[<hv2>%a@]" (pp_arr_ ~sep:"; " Data.print) a
+    Format.fprintf out "[@[<hv2>%a@]]" (pp_arr_ ~sep:"; " Data.print) a
 
   let to_string a =
     to_string_ print a
@@ -138,6 +138,7 @@ let make ~names n row =
 
 let num_rows t = t.size
 let num_cols t = Array.length t.names
+let size = num_rows
 let names t = t.names
 
 let get_exn i t =
@@ -192,7 +193,7 @@ let to_list_rev tbl =
 let to_list tbl = to_list_rev tbl |> List.rev
 
 let print out t =
-  Format.fprintf out "@[<hv>%a@]"
+  Format.fprintf out "[@[<hv>%a@]]"
     (pp_arr_ ~sep:"" ~stop:t.size Row.print) t.rows
 
 

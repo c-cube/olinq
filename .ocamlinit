@@ -5,4 +5,8 @@
 #directory "_build/src";;
 #load "olinq.cma";;
 
+#install_printer OLinq_table.Data.print;;
+#install_printer OLinq_table.Row.print;;
+#install_printer OLinq_table.print;;
+
 open OLinq.Infix;;
