@@ -50,6 +50,9 @@ update_next_tag:
 	zsh -c 'sed -i "s/NEXT_VERSION/$(VERSION)/g" **/*.ml **/*.mli'
 	zsh -c 'sed -i "s/NEXT_RELEASE/$(VERSION)/g" **/*.ml **/*.mli'
 
+upload_doc: doc
+	rsync -tavu olinq.docdir/* cedeela.fr:~/simon/root/files/doc/olinq/
+
 watch:
 	while find src/ -print0 | xargs -0 inotifywait -e delete_self -e modify ; do \
 		echo "============ at `date` ==========" ; \
