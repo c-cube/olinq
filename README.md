@@ -7,6 +7,7 @@ from https://en.wikipedia.org/wiki/Language_Integrated_Query .
 
 documentation (start with module `OLinq`):
 - [dev version](http://c-cube.github.io/olinq/dev)
+- [0.1](http://c-cube.github.io/olinq/0.1)
 
 ## License
 

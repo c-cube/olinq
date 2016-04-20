@@ -47,7 +47,8 @@ doc:
 
 doc_commit: doc
 	git checkout gh-pages && \
-	  rm -rf dev && \
+	  mkdir -p dev && \
+	  rm -rf dev/* && \
 	  cp -r $(DOCDIR)/* dev/ && \
 	  git add dev/
 
