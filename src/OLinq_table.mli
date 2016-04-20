@@ -6,7 +6,9 @@
     This table is designed for holding relational data over scalar
     values (strings, intergers, bools, etc.).
     It trades type-safety for flexibility, and should be well-suited to
-    dealing with CSV-encoded data. *)
+    dealing with CSV-encoded data.
+
+    {b STATUS: EXPERIMENTAL} *)
 
 type 'a printer = Format.formatter -> 'a -> unit
 type 'a sequence = ('a -> unit) -> unit

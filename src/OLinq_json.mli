@@ -3,7 +3,9 @@
 
 (** {1 Interface to Yojson}
 
-    The type {!json} is basically {!Yojson.Safe.json} *)
+    The type {!json} is basically {!Yojson.Safe.json}
+
+    {b STATUS: EXPERIMENTAL} *)
 
 type ('a, 'card) query = ('a, 'card) OLinq.t
 

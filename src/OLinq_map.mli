@@ -18,7 +18,9 @@ type ('a, +'b) t = private {
   fold : 'c. ('c -> 'a -> 'b -> 'c) -> 'c -> 'c;
 }
 (** Map from keys of type ['a] to values of type ['b]
-    {b the type might change}, it is exposed merely for variance checks w.r.t GADTs *)
+    {b the type might change},
+      it is exposed merely for variance checks w.r.t GADTs. Do not access
+      fields directly. *)
 
 type ('a, +'b) map = ('a, 'b) t
 
