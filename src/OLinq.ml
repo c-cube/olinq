@@ -693,19 +693,19 @@ let product q1 q2 = Binary (Product, q1, q2)
 
 let append q1 q2 = Binary (Append, q1, q2)
 
-let inter ?cmp ?eq ?hash () q1 q2 =
+let inter ?cmp ?eq ?hash q1 q2 =
   let build = M.Build.src_of_args ?cmp ?eq ?hash () in
   Binary (SetOp (Inter, build), q1, q2)
 
-let union ?cmp ?eq ?hash () q1 q2 =
+let union ?cmp ?eq ?hash q1 q2 =
   let build = M.Build.src_of_args ?cmp ?eq ?hash () in
   Binary (SetOp (Union, build), q1, q2)
 
-let diff ?cmp ?eq ?hash () q1 q2 =
+let diff ?cmp ?eq ?hash q1 q2 =
   let build = M.Build.src_of_args ?cmp ?eq ?hash () in
   Binary (SetOp (Diff, build), q1, q2)
 
-let subset ?cmp ?eq ?hash () q1 q2 =
+let subset ?cmp ?eq ?hash q1 q2 =
   let build = M.Build.src_of_args ?cmp ?eq ?hash () in
   Binary (SetOp (Subset, build), q1, q2)
 

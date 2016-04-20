@@ -354,33 +354,33 @@ val append : ('a,_) t -> ('a,_) t -> ('a, [`Any]) t
 
 val inter :
   ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
-  unit -> ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
+  ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
 (** Intersection of two collections. Each element will occur at most once
     in the result *)
 
 val union :
   ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
-  unit -> ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
+  ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
 (** Union of two collections. Each element will occur at most once
     in the result *)
 
 val diff :
   ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
-  unit -> ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
+  ('a,_) t -> ('a,_) t -> ('a,[`Any]) t
 (** Set difference *)
 
 (*$=
-  [1;2;8;9;10] (diff () (1--10) (3--7) |> run_list)
+  [1;2;8;9;10] (diff (1--10) (3--7) |> run_list)
 *)
 
 val subset :
   ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
-  unit -> ('a,_) t -> ('a,_) t -> (bool,[`One]) t
+  ('a,_) t -> ('a,_) t -> (bool,[`One]) t
 (** [subset () a b] returns [true] if all elements of [a] belong to [b] *)
 
 (*$T
-  subset () (2 -- 4) (1 -- 4) |> run1
-  not (subset () (1 -- 4) (2 -- 10) |> run1)
+  subset (2 -- 4) (1 -- 4) |> run1
+  not (subset (1 -- 4) (2 -- 10) |> run1)
 *)
 
 (** {6 Tuple and Options} *)
