@@ -37,7 +37,7 @@
     {[
       OLinq.(
         1 -- 20
-        |> group_by' (fun x -> x mod 3)
+        |> group_by (fun x -> x mod 3)
         |> run_list
       ) ;;
       - : (int * int list) list =
@@ -233,35 +233,42 @@ val distinct : ?cmp:'a ord -> unit -> ('a, [`Any]) t -> ('a, [`Any]) t
 (** {6 Aggregation} *)
 
 val group_by : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
-  ('a -> 'b) -> ('a, [`Any]) t -> (('b,'a list) M.t, [>`One]) t
-(** [group_by f] takes a collection [c] as input, and returns
-    a multimap [m] such that for each [x] in [c],
-    [x] occurs in [m] under the key [f x]. In other words, [f] is used
-    to obtain a key from [x], and [x] is added to the multimap using this key. *)
-
-val group_by' : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
   ('a -> 'b) -> ('a, [`Any]) t -> ('b * 'a list, [`Any]) t
+(** [group_by f] takes a collection [c] as input, and returns a collection
+    of pairs [k, l] where every element [x] of [l] satifies [f x = k].
+    In other words, elements of the collection that have the same
+    image by [f] are grouped in the same list. *)
 
 (*$= & ~printer:[%show: (int * int list) list]
   [0, [2; 4; 10; 100]; 1, [3; 7; 11; 19]] \
-  (group_by' (fun x->x mod 2) (of_list [2;3;4;7;10;11;19;100]) \
+  (group_by (fun x->x mod 2) (of_list [2;3;4;7;10;11;19;100]) \
    |> run_list |> List.map (fun (x,y) -> x, lsort y) |> lsort)
 *)
 
+val group_by_reflect : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
+  ('a -> 'b) -> ('a, [`Any]) t -> (('b,'a list) M.t, [>`One]) t
+(** [group_by_reflect f] takes a collection [c] as input, and returns
+    a multimap [m] such that for each [x] in [c], [x] occurs in [m] under the
+    key [f x].
+    In other words, [f] is used
+    to obtain a key from [x], and [x] is added to the multimap using this key. *)
+
 val count :
   ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
-  unit -> ('a, [`Any]) t -> (('a, int) M.t, [>`One]) t
-(** [count c] returns a map from elements of [c] to the number
-    of time those elements occur. *)
-
-val count' :
-  ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
   unit -> ('a, [`Any]) t -> ('a * int, [`Any]) t
+(** [count c] counts how many times each element of the collection
+    occur, and returns pairs of [x, count(x)] *)
 
 (*$= & ~printer:[%show: (char * int) list]
   ['a', 3; 'b', 2; 'c', 1] \
-  (count' () (of_list ['a'; 'b'; 'b'; 'a'; 'c'; 'a']) |> run_list |> lsort)
+  (count () (of_list ['a'; 'b'; 'b'; 'a'; 'c'; 'a']) |> run_list |> lsort)
 *)
+
+val count_reflect :
+  ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
+  unit -> ('a, [`Any]) t -> (('a, int) M.t, [>`One]) t
+(** [count_reflect c] returns a map from elements of [c] to the number
+    of time those elements occur. *)
 
 val fold : ('b -> 'a -> 'b) -> 'b -> ('a, _) t -> ('b, [>`One]) t
 (** Fold over the collection *)

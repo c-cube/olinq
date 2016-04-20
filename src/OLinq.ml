@@ -346,13 +346,13 @@ type (_, _) unary =
   | GroupBy :
       'b M.Build.src
       * ('a -> 'b)
-      -> ('a, ('b, 'a list) M.t) unary
-  | GroupBy' :
+      -> ('a, 'b * 'a list) unary
+  | GroupBy_reflect :
       'b M.Build.src
       * ('a -> 'b)
-      -> ('a, 'b * 'a list) unary
-  | Count : 'a M.Build.src -> ('a, ('a, int) M.t) unary
-  | Count' : 'a M.Build.src -> ('a, 'a * int) unary
+      -> ('a, ('b, 'a list) M.t) unary
+  | Count : 'a M.Build.src -> ('a, 'a * int) unary
+  | Count_reflect : 'a M.Build.src -> ('a, ('a, int) M.t) unary
   | Lazy : ('a lazy_t, 'a) unary
 
 type (_,_) set_op =
@@ -444,11 +444,11 @@ let do_unary : type a b. (a,b) unary -> a Iterable.t -> b Iterable.t
     | SortBy (cmp,proj) -> Iterable.sort ~cmp:(fun a b -> cmp (proj a) (proj b)) c
     | Distinct cmp -> Iterable.distinct ~cmp c
     | Search obj -> Iterable.return (Iterable.search obj c)
-    | GroupBy (src,f) -> Iterable.return (Iterable.do_group_by ~src f c)
-    | GroupBy' (src,f) -> Iterable.of_map (Iterable.do_group_by ~src f c)
+    | GroupBy (src,f) -> Iterable.of_map (Iterable.do_group_by ~src f c)
+    | GroupBy_reflect (src,f) -> Iterable.return (Iterable.do_group_by ~src f c)
     | Contains (eq, x) -> Iterable.return (Iterable.mem ~eq c x)
-    | Count src -> Iterable.return (Iterable.do_count ~src c)
-    | Count' src -> Iterable.of_map (Iterable.do_count ~src c)
+    | Count src -> Iterable.of_map (Iterable.do_count ~src c)
+    | Count_reflect src -> Iterable.return (Iterable.do_count ~src c)
     | Lazy -> Iterable.map Lazy.force c
 
 let do_binary
@@ -572,21 +572,21 @@ let sort_by ?(cmp=Pervasives.compare) proj q = Unary (SortBy (cmp, proj), q)
 
 let distinct ?(cmp=Pervasives.compare) () q = Unary (Distinct cmp, q)
 
+let group_by_reflect ?cmp ?eq ?hash f q =
+  let src = M.Build.src_of_args ?cmp ?eq ?hash () in
+  Unary (GroupBy_reflect (src, f), q)
+
 let group_by ?cmp ?eq ?hash f q =
   let src = M.Build.src_of_args ?cmp ?eq ?hash () in
   Unary (GroupBy (src, f), q)
 
-let group_by' ?cmp ?eq ?hash f q =
+let count_reflect ?cmp ?eq ?hash () q =
   let src = M.Build.src_of_args ?cmp ?eq ?hash () in
-  Unary (GroupBy' (src, f), q)
+  Unary (Count_reflect src, q)
 
 let count ?cmp ?eq ?hash () q =
   let src = M.Build.src_of_args ?cmp ?eq ?hash () in
   Unary (Count src, q)
-
-let count' ?cmp ?eq ?hash () q =
-  let src = M.Build.src_of_args ?cmp ?eq ?hash () in
-  Unary (Count' src, q)
 
 let rec fold
 : type a b. (a -> b -> a) -> a -> b t_ -> a t_
