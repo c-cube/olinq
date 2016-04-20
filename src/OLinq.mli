@@ -490,9 +490,9 @@ module IO : sig
   val lines_l : (string, 'card) t -> (string list, 'card) t
   (** Convert each string into a list of lines *)
 
-  val join : string -> (string,_) t -> (string, [>`One]) t
-  (** [join sep q] joins all the strings in [q] together,
-      similar to [String.join sep (run_list q)] basically. *)
+  val concat : string -> (string,_) t -> (string, [>`One]) t
+  (** [concat sep q] joins all the strings in [q] together,
+      similar to [String.concat sep (run_list q)] basically. *)
 
   val unlines : (string, _) t -> (string, [>`One]) t
   (** Join lines together *)

@@ -893,7 +893,7 @@ module IO = struct
     let f s = lazy (seq_to_list (_lines s 0)) in
     lazy_ (map f q)
 
-  let _join ~sep ?(stop="") v =
+  let concat_ ~sep ?(stop="") v =
     let buf = Buffer.create 128 in
     Vec.iteri v
       ~f:(fun i x ->
@@ -903,11 +903,11 @@ module IO = struct
     Buffer.contents buf
 
   let unlines q =
-    let f l = lazy (_join ~sep:"\n" ~stop:"\n" l) in
+    let f l = lazy (concat_ ~sep:"\n" ~stop:"\n" l) in
     lazy_ (map f (reflect_vec q))
 
-  let join sep q =
-    let f l = lazy (_join ~sep l) in
+  let concat sep q =
+    let f l = lazy (concat_ ~sep l) in
     lazy_ (map f (reflect_vec q))
 
   let out oc q =
