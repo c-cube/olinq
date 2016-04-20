@@ -33,7 +33,7 @@ clean-generated:
 
 test: qtest-gen
 	ocamlbuild $(OPTIONS) -package ppx_deriving.show -package sequence \
-	  -package oUnit -package QTest2Lib -I src -I qtest qtest/run_qtest.native
+	  -package oUnit -package qcheck -I src -I qtest qtest/run_qtest.native
 	./run_qtest.native
 
 DOCDIR=olinq.docdir

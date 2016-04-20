@@ -169,6 +169,7 @@ module Iterable = struct
   let take
     : type a. int -> a t -> a t
     = fun n c -> match c with
+    | _ when n=0 -> empty
     | I_range (i,j) when i<=j -> I_range (i, min j (i+n-1))
     | I_range (i,j) -> I_range (i, max j (i-n+1))
     | _ ->
@@ -555,9 +556,11 @@ let flatten_multimap q = flat_map_seq M.to_seq_multimap q
 
 let rec take
 : type a. int -> a t_ -> a t_
-= fun n q -> match q with
-  | Unary (Map f, q) -> map f (take n q)
-  | _ -> Unary (Take n, q)
+  = fun n q ->
+    if n<0 then invalid_arg "take";
+    match q with
+    | Unary (Map f, q) -> map f (take n q)
+    | _ -> Unary (Take n, q)
 
 let take1 q = take 1 q
 
