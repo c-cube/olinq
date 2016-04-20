@@ -1,0 +1,422 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link rel="previous" href="OLinq_map.html">
+<link rel="next" href="OLinq_table.html">
+<link rel="Up" href="index.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of exceptions" rel=Appendix href="index_exceptions.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="OLinq_json" rel="Chapter" href="OLinq_json.html">
+<link title="OLinq_map" rel="Chapter" href="OLinq_map.html">
+<link title="OLinq" rel="Chapter" href="OLinq.html">
+<link title="OLinq_table" rel="Chapter" href="OLinq_table.html">
+<link title="OLinq_vec" rel="Chapter" href="OLinq_vec.html"><link title="Main Type" rel="Section" href="#2_MainType">
+<link title="Initial values" rel="Section" href="#2_Initialvalues">
+<link title="Execution" rel="Subsection" href="#6_Execution">
+<link title="Basics" rel="Subsection" href="#6_Basics">
+<link title="Aggregation" rel="Subsection" href="#6_Aggregation">
+<link title="Binary Operators" rel="Subsection" href="#6_BinaryOperators">
+<link title="Tuple and Options" rel="Subsection" href="#6_TupleandOptions">
+<link title="Tuple and Options" rel="Subsection" href="#6_TupleandOptions">
+<link title="Applicative" rel="Subsection" href="#6_Applicative">
+<link title="Monad" rel="Subsection" href="#6_Monad">
+<link title="Misc" rel="Subsection" href="#6_Misc">
+<link title="Infix" rel="Subsection" href="#6_Infix">
+<link title="Adapters" rel="Subsection" href="#6_Adapters">
+<title>OLinq</title>
+</head>
+<body>
+<div class="navbar"><a class="pre" href="OLinq_map.html" title="OLinq_map">Previous</a>
+&nbsp;<a class="up" href="index.html" title="Index">Up</a>
+&nbsp;<a class="post" href="OLinq_table.html" title="OLinq_table">Next</a>
+</div>
+<h1>Module <a href="type_OLinq.html">OLinq</a></h1>
+
+<pre><span class="keyword">module</span> OLinq: <code class="code">sig</code> <a href="OLinq.html">..</a> <code class="code">end</code></pre><div class="info module top">
+<h1 id="1_LINQlikeoperationsoncollections">LINQ-like operations on collections</h1>
+<p>
+
+    The purpose is to provide powerful combinators to express iteration,
+    transformation and combination of collections of items.
+<p>
+
+    Functions and operations are assumed to be referentially transparent, i.e.
+    they should not rely on external side effects, they should not rely on
+    the order of execution.
+<p>
+
+    <pre class="codepre"><code class="code">      OLinq.(
+        of_list [1;2;3]
+        |&gt; flat_map (fun x -&gt; (x -- (x+10)))
+        |&gt; count ()
+        |&gt; flat_map of_pmap
+        |&gt; sort ()
+        |&gt; run_list
+      );;
+
+      - : (int * int) list = [(1, 1); (2, 2); (3, 3); (4, 3); (5, 3); (6, 3);
+                              (7, 3); (8, 3); (9, 3); (10, 3); (11, 3); (12, 2); (13, 1)]
+
+        OLinq.(
+          IO.read_file "/tmp/foo"
+          |&gt; IO.lines
+          |&gt; sort ()
+          |&gt; IO.to_file_lines "/tmp/bar"
+        );;
+      - :  `Ok ()
+    </code></pre>
+<p>
+
+    <pre class="codepre"><code class="code">      OLinq.(
+        1 -- 20
+        |&gt; group_by' (fun x -&gt; x mod 3)
+        |&gt; run_list
+      ) ;;
+      - : (int * int list) list =
+      [(2, [20; 17; 14; 11; 8; 5; 2]);
+       (0, [18; 15; 12; 9; 6; 3; 0]);
+       (1, [19; 16; 13; 10; 7; 4; 1])]
+    </code></pre><br>
+</div>
+<hr width="100%">
+
+<pre><span id="TYPEsequence"><span class="keyword">type</span> <code class="type">'a</code> sequence</span> = <code class="type">('a -> unit) -> unit</code> </pre>
+
+
+<pre><span id="TYPEequal"><span class="keyword">type</span> <code class="type">'a</code> equal</span> = <code class="type">'a -> 'a -> bool</code> </pre>
+
+
+<pre><span id="TYPEord"><span class="keyword">type</span> <code class="type">'a</code> ord</span> = <code class="type">'a -> 'a -> int</code> </pre>
+
+
+<pre><span id="TYPEhash"><span class="keyword">type</span> <code class="type">'a</code> hash</span> = <code class="type">'a -> int</code> </pre>
+
+
+<pre><span id="TYPEor_error"><span class="keyword">type</span> <code class="type">'a</code> or_error</span> = <code class="type">[ `Error of string | `Ok of 'a ]</code> </pre>
+
+
+<pre><span class="keyword">module</span> <a href="OLinq.Iterable.html">Iterable</a>: <code class="code">sig</code> <a href="OLinq.Iterable.html">..</a> <code class="code">end</code></pre>
+<pre><span class="keyword">module</span> <a href="OLinq.M.html">M</a>: <code class="type"><a href="OLinq_map.html">OLinq_map</a></code></pre><div class="info">
+Polymorphic Maps
+</div>
+<br>
+<h2 id="2_MainType">Main Type</h2><br>
+
+<pre><span id="TYPEt"><span class="keyword">type</span> <code class="type">('a, +[< `Any | `AtMostOne | `One ])</code> t</span> </pre>
+<div class="info ">
+Type of a query that returns zero, one or more values of type 'a.
+    The parameter <code class="code">'card</code> indicates how many elements are in the collection,
+    with <code class="code">`Any</code> indicating the number is unknown, <code class="code">`AtMostOne</code> that there
+    are 0 or 1 elements and <code class="code">`One</code> exactly one.
+<p>
+
+    Conceptually, the cardinalities are ordered from most precise (`One)
+    to least precise (`Any):  `One &lt; `AtMostOne &lt; `Any.<br>
+</div>
+
+
+<pre><span id="TYPEt_any"><span class="keyword">type</span> <code class="type">'a</code> t_any</span> = <code class="type">('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code> </pre>
+
+
+<pre><span id="TYPEt_one"><span class="keyword">type</span> <code class="type">'a</code> t_one</span> = <code class="type">('a, [ `One ]) <a href="OLinq.html#TYPEt">t</a></code> </pre>
+
+
+<pre><span id="TYPEt_at_most_one"><span class="keyword">type</span> <code class="type">'a</code> t_at_most_one</span> = <code class="type">('a, [ `AtMostOne ]) <a href="OLinq.html#TYPEt">t</a></code> </pre>
+
+<br>
+<h2 id="2_Initialvalues">Initial values</h2><br>
+
+<pre><span id="VALempty"><span class="keyword">val</span> empty</span> : <code class="type">('a, [< `Any | `AtMostOne | `One > `AtMostOne ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Empty collection<br>
+</div>
+
+<pre><span id="VALreturn"><span class="keyword">val</span> return</span> : <code class="type">'a -> ('a, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Return one value<br>
+</div>
+
+<pre><span id="VALof_list"><span class="keyword">val</span> of_list</span> : <code class="type">'a list -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Query that just returns the elements of the list<br>
+</div>
+
+<pre><span id="VALof_array"><span class="keyword">val</span> of_array</span> : <code class="type">'a array -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALof_array_i"><span class="keyword">val</span> of_array_i</span> : <code class="type">'a array -> (int * 'a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALrange"><span class="keyword">val</span> range</span> : <code class="type">int -> int -> (int, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">range i j</code> goes from <code class="code">i</code> up to <code class="code">j</code> included<br>
+</div>
+
+<pre><span id="VAL(--)"><span class="keyword">val</span> (--)</span> : <code class="type">int -> int -> (int, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Synonym to <a href="OLinq.html#VALrange"><code class="code">OLinq.range</code></a><br>
+</div>
+
+<pre><span id="VALof_hashtbl"><span class="keyword">val</span> of_hashtbl</span> : <code class="type">('a, 'b) Hashtbl.t -> ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALof_seq"><span class="keyword">val</span> of_seq</span> : <code class="type">'a <a href="OLinq.html#TYPEsequence">sequence</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Query that returns the elements of the given sequence.<br>
+</div>
+
+<pre><span id="VALof_vec"><span class="keyword">val</span> of_vec</span> : <code class="type">'a <a href="OLinq_vec.html#TYPEt">OLinq_vec.t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALof_queue"><span class="keyword">val</span> of_queue</span> : <code class="type">'a Queue.t -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALof_stack"><span class="keyword">val</span> of_stack</span> : <code class="type">'a Stack.t -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALof_string"><span class="keyword">val</span> of_string</span> : <code class="type">string -> (char, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Traverse the characters of the string<br>
+</div>
+
+<pre><span id="VALof_map"><span class="keyword">val</span> of_map</span> : <code class="type">('a, 'b) M.t -> ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">of_map m</code> yields each binding of <code class="code">m</code><br>
+</div>
+
+<pre><span id="VALof_multimap"><span class="keyword">val</span> of_multimap</span> : <code class="type">('a, 'b list) M.t -> ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">of_multimap m</code> yields each single binding of <code class="code">m</code><br>
+</div>
+<br>
+<h6 id="6_Execution">Execution</h6><br>
+
+<pre><span id="VALrun"><span class="keyword">val</span> run</span> : <code class="type">?limit:int -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> 'a <a href="OLinq.Iterable.html#TYPEt">Iterable.t</a></code></pre><div class="info ">
+Execute the query, possibly returning an error if things go wrong<br>
+</div>
+<div class="param_info"><code class="code">limit</code> : max number of values to return</div>
+
+<pre><span id="VALrun_list"><span class="keyword">val</span> run_list</span> : <code class="type">?limit:int -> ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> 'a list</code></pre>
+<pre><span id="VALrun_array"><span class="keyword">val</span> run_array</span> : <code class="type">?limit:int -> ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> 'a array</code></pre>
+<pre><span id="VALrun_vec"><span class="keyword">val</span> run_vec</span> : <code class="type">?limit:int -> ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> 'a <a href="OLinq_vec.html#TYPEt">OLinq_vec.t</a></code></pre>
+<pre><span id="VALrun1"><span class="keyword">val</span> run1</span> : <code class="type">('a, [ `One ]) <a href="OLinq.html#TYPEt">t</a> -> 'a</code></pre><div class="info ">
+Run the query and return the only value<br>
+</div>
+
+<pre><span id="VALrun_head"><span class="keyword">val</span> run_head</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> 'a option</code></pre><div class="info ">
+Return first result<br>
+</div>
+
+<pre><span id="VALrun1_exn"><span class="keyword">val</span> run1_exn</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> 'a</code></pre><div class="info ">
+unsafe shortcut for <a href="OLinq.html#VALrun_head"><code class="code">OLinq.run_head</code></a>.<br>
+<b>Raises</b> <code>Not_found</code> if the query contains 0 element<br>
+</div>
+<br>
+<h6 id="6_Basics">Basics</h6><br>
+
+<pre><span id="VALmap"><span class="keyword">val</span> map</span> : <code class="type">('a -> 'b) -><br>       ('a, [< `Any | `AtMostOne | `One ] as 'c) <a href="OLinq.html#TYPEt">t</a> -> ('b, 'c) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Map each value<br>
+</div>
+
+<pre><span id="VAL(>|=)"><span class="keyword">val</span> (&gt;|=)</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ] as 'c) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a -> 'b) -> ('b, 'c) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Infix synonym of <a href="OLinq.html#VALmap"><code class="code">OLinq.map</code></a><br>
+</div>
+
+<pre><span id="VALfilter"><span class="keyword">val</span> filter</span> : <code class="type">('a -> bool) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Filter out values that do not satisfy predicate. We lose precision
+    on the cardinality because of type system constraints.<br>
+</div>
+
+<pre><span id="VALsize"><span class="keyword">val</span> size</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (int, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">size t</code> returns one value, the number of items returned by <code class="code">t</code><br>
+</div>
+
+<pre><span id="VALchoose"><span class="keyword">val</span> choose</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a, [< `Any | `AtMostOne | `One > `AtMostOne ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Choose one element (if any, otherwise empty) in the collection.
+    This is like a "cut" in prolog.<br>
+</div>
+
+<pre><span id="VALfilter_map"><span class="keyword">val</span> filter_map</span> : <code class="type">('a -> 'b option) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Filter and map elements at once<br>
+</div>
+
+<pre><span id="VALflat_map_seq"><span class="keyword">val</span> flat_map_seq</span> : <code class="type">('a -> 'b <a href="OLinq.html#TYPEsequence">sequence</a>) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Same as <a href="OLinq.html#VALflat_map"><code class="code">OLinq.flat_map</code></a> but using sequences<br>
+</div>
+
+<pre><span id="VALflat_map_l"><span class="keyword">val</span> flat_map_l</span> : <code class="type">('a -> 'b list) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+map each element to a collection and flatten the result<br>
+</div>
+
+<pre><span id="VALflatten_list"><span class="keyword">val</span> flatten_list</span> : <code class="type">('a list, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALflatten_seq"><span class="keyword">val</span> flatten_seq</span> : <code class="type">('a <a href="OLinq.html#TYPEsequence">sequence</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALflatten_map"><span class="keyword">val</span> flatten_map</span> : <code class="type">(('a, 'b) M.t, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALflatten_multimap"><span class="keyword">val</span> flatten_multimap</span> : <code class="type">(('a, 'b list) M.t, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALtake"><span class="keyword">val</span> take</span> : <code class="type">int -> ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Take at most <code class="code">n</code> elements<br>
+</div>
+
+<pre><span id="VALtake1"><span class="keyword">val</span> take1</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a, [< `Any | `AtMostOne | `One > `AtMostOne ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Specialized version of <a href="OLinq.html#VALtake"><code class="code">OLinq.take</code></a> that keeps only the first element<br>
+</div>
+
+<pre><span id="VALtake_while"><span class="keyword">val</span> take_while</span> : <code class="type">('a -> bool) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Take elements while they satisfy a predicate<br>
+</div>
+
+<pre><span id="VALsort"><span class="keyword">val</span> sort</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -> unit -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Sort items by the given comparison function. Only meaningful when
+    there are potentially many elements<br>
+</div>
+
+<pre><span id="VALsort_by"><span class="keyword">val</span> sort_by</span> : <code class="type">?cmp:'b <a href="OLinq.html#TYPEord">ord</a> -><br>       ('a -> 'b) -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">sort_by proj c</code> sorts the collection <code class="code">c</code> by projecting elements using
+    <code class="code">proj</code>, then using <code class="code">cmp</code> to order them<br>
+</div>
+
+<pre><span id="VALdistinct"><span class="keyword">val</span> distinct</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -> unit -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Remove duplicate elements from the input collection.
+    All elements in the result are distinct.<br>
+</div>
+<br>
+<h6 id="6_Aggregation">Aggregation</h6><br>
+
+<pre><span id="VALgroup_by"><span class="keyword">val</span> group_by</span> : <code class="type">?cmp:'b <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'b <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'b <a href="OLinq.html#TYPEhash">hash</a> -><br>       ('a -> 'b) -><br>       ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (('b, 'a list) M.t, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">group_by f</code> takes a collection <code class="code">c</code> as input, and returns
+    a multimap <code class="code">m</code> such that for each <code class="code">x</code> in <code class="code">c</code>,
+    <code class="code">x</code> occurs in <code class="code">m</code> under the key <code class="code">f x</code>. In other words, <code class="code">f</code> is used
+    to obtain a key from <code class="code">x</code>, and <code class="code">x</code> is added to the multimap using this key.<br>
+</div>
+
+<pre><span id="VALgroup_by'"><span class="keyword">val</span> group_by'</span> : <code class="type">?cmp:'b <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'b <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'b <a href="OLinq.html#TYPEhash">hash</a> -><br>       ('a -> 'b) -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a> -> ('b * 'a list, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALcount"><span class="keyword">val</span> count</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       unit -><br>       ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (('a, int) M.t, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">count c</code> returns a map from elements of <code class="code">c</code> to the number
+    of time those elements occur.<br>
+</div>
+
+<pre><span id="VALcount'"><span class="keyword">val</span> count'</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       unit -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a> -> ('a * int, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALfold"><span class="keyword">val</span> fold</span> : <code class="type">('b -> 'a -> 'b) -><br>       'b -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('b, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Fold over the collection<br>
+</div>
+
+<pre><span id="VALis_empty"><span class="keyword">val</span> is_empty</span> : <code class="type">('a, [< `Any | `AtMostOne ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (bool, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALsum"><span class="keyword">val</span> sum</span> : <code class="type">(int, [< `Any | `AtMostOne ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (int, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALcontains"><span class="keyword">val</span> contains</span> : <code class="type">?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       'a -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (bool, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">contains x q</code> returns <code class="code">true</code> if <code class="code">x</code> is among the elements returned
+    by <code class="code">q</code>. Careful, this runs <code class="code">q</code> and might be slow!<br>
+</div>
+
+<pre><span id="VALaverage"><span class="keyword">val</span> average</span> : <code class="type">(int, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (int, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALmax"><span class="keyword">val</span> max</span> : <code class="type">(int, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (int, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALmin"><span class="keyword">val</span> min</span> : <code class="type">(int, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (int, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALfor_all"><span class="keyword">val</span> for_all</span> : <code class="type">('a -> bool) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (bool, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALexists"><span class="keyword">val</span> exists</span> : <code class="type">('a -> bool) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (bool, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALfind"><span class="keyword">val</span> find</span> : <code class="type">('a -> bool) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a option, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALfind_map"><span class="keyword">val</span> find_map</span> : <code class="type">('a -> 'b option) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('b option, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><br>
+<h6 id="6_BinaryOperators">Binary Operators</h6><br>
+
+<pre><span id="VALjoin"><span class="keyword">val</span> join</span> : <code class="type">?cmp:'key <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'key <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'key <a href="OLinq.html#TYPEhash">hash</a> -><br>       ('a -> 'key) -><br>       ('b -> 'key) -><br>       merge:('key -> 'a -> 'b -> 'c option) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('b, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('c, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">join key1 key2 ~merge</code> is a binary operation
+    that takes two collections <code class="code">a</code> and <code class="code">b</code>, projects their
+    elements resp. with <code class="code">key1</code> and <code class="code">key2</code>, and combine
+    values <code class="code">(x,y)</code> from <code class="code">(a,b)</code> with the same <code class="code">key</code>
+    using <code class="code">merge</code>. If <code class="code">merge</code> returns <code class="code">None</code>, the combination
+    of values is discarded.<br>
+</div>
+
+<pre><span id="VALgroup_join"><span class="keyword">val</span> group_join</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       ('b -> 'a) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('b, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (('a, 'b list) M.t, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">group_join key2</code> associates to every element <code class="code">x</code> of
+    the first collection, all the elements <code class="code">y</code> of the second
+    collection such that <code class="code">eq x (key y)</code>. Elements of the first
+    collections without corresponding values in the second one
+    are mapped to <code class="code">[]</code><br>
+</div>
+
+<pre><span id="VALgroup_join'"><span class="keyword">val</span> group_join'</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       ('b -> 'a) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('b, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a * 'b list, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Same as <a href="OLinq.html#VALgroup_join"><code class="code">OLinq.group_join</code></a>, but then flatten the map<br>
+</div>
+
+<pre><span id="VALproduct"><span class="keyword">val</span> product</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('b, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Cartesian product<br>
+</div>
+
+<pre><span id="VALappend"><span class="keyword">val</span> append</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Append two collections together<br>
+</div>
+
+<pre><span id="VALinter"><span class="keyword">val</span> inter</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       unit -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Intersection of two collections. Each element will occur at most once
+    in the result<br>
+</div>
+
+<pre><span id="VALunion"><span class="keyword">val</span> union</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       unit -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Union of two collections. Each element will occur at most once
+    in the result<br>
+</div>
+
+<pre><span id="VALdiff"><span class="keyword">val</span> diff</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       unit -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Set difference<br>
+</div>
+
+<pre><span id="VALsubset"><span class="keyword">val</span> subset</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       unit -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> (bool, [ `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">subset () a b</code> returns <code class="code">true</code> if all elements of <code class="code">a</code> belong to <code class="code">b</code><br>
+</div>
+<br>
+<h6 id="6_TupleandOptions">Tuple and Options</h6><br>
+<br>
+<h6 id="6_TupleandOptions">Tuple and Options</h6><br>
+<br>
+Specialized projection operators<br>
+
+<pre><span id="VALmap_fst"><span class="keyword">val</span> map_fst</span> : <code class="type">('a -> 'b) -><br>       ('a * 'c, [< `Any | `AtMostOne | `One ] as 'd) <a href="OLinq.html#TYPEt">t</a> -><br>       ('b * 'c, 'd) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALmap_snd"><span class="keyword">val</span> map_snd</span> : <code class="type">('a -> 'b) -><br>       ('c * 'a, [< `Any | `AtMostOne | `One ] as 'd) <a href="OLinq.html#TYPEt">t</a> -><br>       ('c * 'b, 'd) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALflatten_opt"><span class="keyword">val</span> flatten_opt</span> : <code class="type">('a option, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Flatten the collection by removing <code class="code">None</code> and mapping <code class="code">Some x</code> to <code class="code">x</code>.<br>
+</div>
+<br>
+<h6 id="6_Applicative">Applicative</h6><br>
+
+<pre><span id="VALpure"><span class="keyword">val</span> pure</span> : <code class="type">'a -> ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Synonym to <a href="OLinq.html#VALreturn"><code class="code">OLinq.return</code></a><br>
+</div>
+
+<pre><span id="VALapp"><span class="keyword">val</span> app</span> : <code class="type">('a -> 'b, [< `Any | `AtMostOne | `One ] as 'c) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a, 'c) <a href="OLinq.html#TYPEt">t</a> -> ('b, 'c) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Apply each function to each value. The cardinality should be the lowest
+    upper bound of both input cardinalities (any,_) -&gt; any, (one,one) -&gt; one, etc.<br>
+</div>
+
+<pre><span id="VAL(<*>)"><span class="keyword">val</span> (&lt;*&gt;)</span> : <code class="type">('a -> 'b, [< `Any | `AtMostOne | `One ] as 'c) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a, 'c) <a href="OLinq.html#TYPEt">t</a> -> ('b, 'c) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Infix synonym to <a href="OLinq.html#VALapp"><code class="code">OLinq.app</code></a><br>
+</div>
+<br>
+<h6 id="6_Monad">Monad</h6>
+<p>
+
+    Careful, those operators do not allow any optimization before running the
+    query, they might therefore be pretty slow.<br>
+
+<pre><span id="VALflat_map"><span class="keyword">val</span> flat_map</span> : <code class="type">('a -> ('b, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a>) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Use the result of a query to build another query and immediately run it.<br>
+</div>
+
+<pre><span id="VAL(>>=)"><span class="keyword">val</span> (&gt;&gt;=)</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a -> ('b, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a>) -> ('b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Infix version of <a href="OLinq.html#VALflat_map"><code class="code">OLinq.flat_map</code></a><br>
+</div>
+<br>
+<h6 id="6_Misc">Misc</h6><br>
+
+<pre><span id="VALlazy_"><span class="keyword">val</span> lazy_</span> : <code class="type">('a lazy_t, [< `Any | `AtMostOne | `One ] as 'b) <a href="OLinq.html#TYPEt">t</a> -> ('a, 'b) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="EXCEPTIONUnwrapNone"><span class="keyword">exception</span> UnwrapNone</span></pre>
+
+<pre><span id="VALopt_unwrap_exn"><span class="keyword">val</span> opt_unwrap_exn</span> : <code class="type">('a option, [< `Any | `AtMostOne | `One ] as 'b) <a href="OLinq.html#TYPEt">t</a> -> ('a, 'b) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<b>Raises</b> <code>UnwrapNone</code> if some option is None<br>
+</div>
+<br>
+<h6 id="6_Infix">Infix</h6><br>
+
+<pre><span class="keyword">module</span> <a href="OLinq.Infix.html">Infix</a>: <code class="code">sig</code> <a href="OLinq.Infix.html">..</a> <code class="code">end</code></pre><br>
+<h6 id="6_Adapters">Adapters</h6><br>
+
+<pre><span id="VALreflect_vec"><span class="keyword">val</span> reflect_vec</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a <a href="OLinq_vec.html#TYPEt">OLinq_vec.t</a>, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">reflect_seq q</code> evaluates all values in <code class="code">q</code> and returns a sequence
+    of all those values. Also blocks optimizations<br>
+</div>
+
+<pre><span id="VALreflect_list"><span class="keyword">val</span> reflect_list</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a list, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">reflect_list q</code> evaluates all values in <code class="code">q</code> and returns a list
+    of all those values. Also blocks optimizations<br>
+</div>
+
+<pre><span id="VALreflect_hashtbl"><span class="keyword">val</span> reflect_hashtbl</span> : <code class="type">('a * 'b, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (('a, 'b) Hashtbl.t, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+Build a hashtable from the collection<br>
+</div>
+
+<pre><span id="VALreflect_queue"><span class="keyword">val</span> reflect_queue</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a Queue.t, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALreflect_stack"><span class="keyword">val</span> reflect_stack</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a Stack.t, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span class="keyword">module</span> <a href="OLinq.AdaptSet.html">AdaptSet</a>: <div class="sig_block"><code class="code">functor (</code><code class="code">S</code><code class="code"> : </code><code class="type">Set.S</code><code class="code">) -&gt; </code><code class="code">sig</code> <a href="OLinq.AdaptSet.html">..</a> <code class="code">end</code></div></pre>
+<pre><span class="keyword">module</span> <a href="OLinq.AdaptMap.html">AdaptMap</a>: <div class="sig_block"><code class="code">functor (</code><code class="code">M</code><code class="code"> : </code><code class="type">Map.S</code><code class="code">) -&gt; </code><code class="code">sig</code> <a href="OLinq.AdaptMap.html">..</a> <code class="code">end</code></div></pre>
+<pre><span class="keyword">module</span> <a href="OLinq.IO.html">IO</a>: <code class="code">sig</code> <a href="OLinq.IO.html">..</a> <code class="code">end</code></pre></body></html>
