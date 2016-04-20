@@ -4,7 +4,7 @@ version: "dev"
 author: "Simon Cruanes"
 maintainer: "simon.cruanes.2007@m4x.org"
 build: [
-  [ make "all" ]
+  [ make "build" ]
 ]
 install: [
   [ make "install" ]

@@ -2,7 +2,7 @@
 TARGETS=$(addprefix src/, olinq.cmxa olinq.cma olinq.cmxs)
 OPTIONS=-use-ocamlfind -classic-display
 
-all:
+build:
 	ocamlbuild $(OPTIONS) $(TARGETS)
 
 clean:
@@ -36,7 +36,7 @@ test: qtest-gen
 	  -package oUnit -package qcheck -I src -I qtest qtest/run_qtest.native
 	./run_qtest.native
 
-install: all
+install: build
 	ocamlfind install olinq src/META $(addprefix _build/, $(TARGETS)) _build/src/*.cmi
 
 DOCDIR=olinq.docdir
@@ -50,6 +50,8 @@ doc_commit: doc
 	  rm -rf dev && \
 	  cp -r $(DOCDIR)/* dev/ && \
 	  git add dev/
+
+all: build test doc
 
 # FIXME update
 VERSION=$(shell awk '/^Version:/ {print $$2}' _oasis)
