@@ -33,6 +33,19 @@
       - :  `Ok ()
     ]}
 
+
+    {[
+      OLinq.(
+        1 -- 20
+        |> group_by' (fun x -> x mod 3)
+        |> run_list
+      ) ;;
+      - : (int * int list) list =
+      [(2, [20; 17; 14; 11; 8; 5; 2]);
+       (0, [18; 15; 12; 9; 6; 3; 0]);
+       (1, [19; 16; 13; 10; 7; 4; 1])]
+    ]}
+
 *)
 
 type 'a sequence = ('a -> unit) -> unit
