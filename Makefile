@@ -1,5 +1,5 @@
 
-TARGETS=$(addprefix src/, olinq.cmxa olinq.cma olinq.cmxs)
+TARGETS=$(addprefix src/, olinq.cmxa olinq.cma olinq.cmxs olinq.a)
 OPTIONS=-use-ocamlfind -classic-display
 
 build:
