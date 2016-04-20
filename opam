@@ -20,5 +20,5 @@ tags: [ "linq" "query" "join" "group" "collection" ]
 homepage: "https://github.com/c-cube/olinq/"
 dev-repo: "https://github.com/c-cube/olinq.git"
 bug-reports: "https://github.com/c-cube/olinq/issues/"
-
+available: [ocaml-version >= "4.00.0"]
 
