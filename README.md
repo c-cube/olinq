@@ -5,7 +5,8 @@ transformation and combination of collections of items living in
 the type `'a t`. Inspired
 from https://en.wikipedia.org/wiki/Language_Integrated_Query .
 
-documentation: TODO (see .mli files)
+documentation (start with module `OLinq`):
+- [dev version](http://c-cube.github.io/olinq/dev)
 
 ## License
 
