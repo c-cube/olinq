@@ -1,0 +1,10 @@
+name = "olinq"
+version = "0.1"
+requires = "bytes"
+description = "powerful combinators for iteration, transformation and combination of collections"
+archive(byte) = "olinq.cma"
+archive(byte, plugin) = "olinq.cma"
+archive(native) = "olinq.cmxa"
+archive(native, plugin) = "olinq.cmxs"
+exists_if = "olinq.cma"
+

@@ -1,5 +1,5 @@
 
-TARGETS=olinq.cmxa olinq.cma olinq.cmxs
+TARGETS=$(addprefix src/, olinq.cmxa olinq.cma olinq.cmxs)
 OPTIONS=-use-ocamlfind -classic-display
 
 all:
@@ -35,6 +35,9 @@ test: qtest-gen
 	ocamlbuild $(OPTIONS) -package ppx_deriving.show -package sequence \
 	  -package oUnit -package qcheck -I src -I qtest qtest/run_qtest.native
 	./run_qtest.native
+
+install: all
+	ocamlfind install olinq src/META $(addprefix _build/, $(TARGETS)) _build/src/*.cmi
 
 DOCDIR=olinq.docdir
 
