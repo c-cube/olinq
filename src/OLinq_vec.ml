@@ -105,6 +105,6 @@ let of_seq seq =
   append_seq v seq;
   v
 
-let to_list v = fold (fun l x -> x::l) [] v |> List.rev
+let to_list v = List.rev (fold (fun l x -> x::l) [] v)
 
 let to_array v = Array.sub v.vec 0 v.size

@@ -72,7 +72,8 @@ module Iterable : sig
 end
 
 (** {2 Polymorphic Maps} *)
-module M = OLinq_map
+
+type ('a, 'b) map = ('a, 'b) OLinq_map.t
 
 (** {2 Main Type} *)
 
@@ -123,10 +124,10 @@ val of_stack : 'a Stack.t -> ('a, [`Any]) t
 val of_string : string -> (char, [`Any]) t
 (** Traverse the characters of the string *)
 
-val of_map : ('a, 'b) M.t -> ('a * 'b, [`Any]) t
+val of_map : ('a, 'b) map -> ('a * 'b, [`Any]) t
 (** [of_map m] yields each binding of [m] *)
 
-val of_multimap : ('a, 'b list) M.t -> ('a * 'b, [`Any]) t
+val of_multimap : ('a, 'b list) map -> ('a * 'b, [`Any]) t
 (** [of_multimap m] yields each single binding of [m] *)
 
 (** {6 Execution} *)
@@ -163,7 +164,7 @@ val filter : ('a -> bool) -> ('a, _) t -> ('a, [`Any]) t
 (** Filter out values that do not satisfy predicate. We lose precision
     on the cardinality because of type system constraints. *)
 
-val size : _ t -> (int, [>`One]) t
+val size : (_,_) t -> (int, [>`One]) t
 (** [size t] returns one value, the number of items returned by [t] *)
 
 val choose : ('a, _) t -> ('a, [>`AtMostOne]) t
@@ -183,9 +184,9 @@ val flatten_list : ('a list, _) t -> ('a, [`Any]) t
 
 val flatten_seq : ('a sequence,_) t -> ('a, [`Any]) t
 
-val flatten_map : (('a, 'b) M.t, _) t -> ('a * 'b, [`Any]) t
+val flatten_map : (('a, 'b) map, _) t -> ('a * 'b, [`Any]) t
 
-val flatten_multimap : (('a, 'b list) M.t, _) t -> ('a * 'b, [`Any]) t
+val flatten_multimap : (('a, 'b list) map, _) t -> ('a * 'b, [`Any]) t
 
 val take : int -> ('a, _) t -> ('a, [`Any]) t
 (** Take at most [n] elements *)
@@ -246,7 +247,7 @@ val group_by : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
 *)
 
 val group_by_reflect : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
-  ('a -> 'b) -> ('a, [`Any]) t -> (('b,'a list) M.t, [>`One]) t
+  ('a -> 'b) -> ('a, [`Any]) t -> (('b,'a list) map, [>`One]) t
 (** [group_by_reflect f] takes a collection [c] as input, and returns
     a multimap [m] such that for each [x] in [c], [x] occurs in [m] under the
     key [f x].
@@ -266,7 +267,7 @@ val count :
 
 val count_reflect :
   ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
-  unit -> ('a, [`Any]) t -> (('a, int) M.t, [>`One]) t
+  unit -> ('a, [`Any]) t -> (('a, int) map, [>`One]) t
 (** [count_reflect c] returns a map from elements of [c] to the number
     of time those elements occur. *)
 
@@ -319,7 +320,7 @@ val group_join : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
 
 val group_join_reflect : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
   ('b -> 'a) -> ('a,_) t -> ('b,_) t ->
-  (('a, 'b list) M.t, [>`One]) t
+  (('a, 'b list) map, [>`One]) t
 (** Same as {!group_join}, but reflects the groups as a multimap *)
 
 (*$R

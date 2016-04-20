@@ -7,7 +7,7 @@
 
     {b STATUS: EXPERIMENTAL} *)
 
-type ('a, 'card) query = ('a, 'card) OLinq.t
+type ('a, +'card) query = ('a, 'card) OLinq.t
 
 (*$inject
   module L = OLinq

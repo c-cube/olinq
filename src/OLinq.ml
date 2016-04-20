@@ -36,6 +36,8 @@ let seq_head seq =
 module M = OLinq_map
 module Vec = OLinq_vec
 
+type ('a, 'b) map = ('a, 'b) OLinq_map.t
+
 type 'a search_result =
   | SearchContinue
   | SearchStop of 'a

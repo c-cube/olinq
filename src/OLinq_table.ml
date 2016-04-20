@@ -149,8 +149,7 @@ let get i t =
   try Some (get_exn i t)
   with IndexError -> None
 
-let get_cell_exn i j t =
-  get_exn i t |> Row.get_exn j
+let get_cell_exn i j t = Row.get_exn j (get_exn i t)
 
 let get_cell i j t =
   try Some (get_cell_exn i j t)
@@ -190,7 +189,7 @@ let to_seq tbl yield = iter ~f:yield tbl
 let to_list_rev tbl =
   fold tbl ~f:(fun acc x -> x::acc) ~x:[]
 
-let to_list tbl = to_list_rev tbl |> List.rev
+let to_list tbl = List.rev (to_list_rev tbl)
 
 let print out t =
   Format.fprintf out "[@[<hv>%a@]]"
