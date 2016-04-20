@@ -45,6 +45,12 @@ doc:
 	mkdir -p $(DOCDIR)
 	ocamldoc -I _build/src/ -html -d $(DOCDIR) src/*.mli
 
+doc_commit: doc
+	git checkout gh-pages && \
+	  rm -rf dev && \
+	  cp -r $(DOCDIR)/* dev/ && \
+	  git add dev/
+
 # FIXME update
 VERSION=$(shell awk '/^Version:/ {print $$2}' _oasis)
 
