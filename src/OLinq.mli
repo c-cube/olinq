@@ -310,21 +310,21 @@ val join : ?cmp:'key ord -> ?eq:'key equal -> ?hash:'key hash ->
 
 val group_join : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
   ('b -> 'a) -> ('a,_) t -> ('b,_) t ->
-  (('a, 'b list) M.t, [>`One]) t
+  ('a * 'b list, [`Any]) t
 (** [group_join key2] associates to every element [x] of
     the first collection, all the elements [y] of the second
     collection such that [eq x (key y)]. Elements of the first
     collections without corresponding values in the second one
     are mapped to [[]] *)
 
-val group_join' : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
+val group_join_reflect : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
   ('b -> 'a) -> ('a,_) t -> ('b,_) t ->
-  ('a * 'b list, [`Any]) t
-(** Same as {!group_join}, but then flatten the map *)
+  (('a, 'b list) M.t, [>`One]) t
+(** Same as {!group_join}, but reflects the groups as a multimap *)
 
 (*$R
   let res =
-    group_join' fst
+    group_join fst
       (of_list [1;2;3])
       (of_list [1, "1"; 1, "one"; 2, "two"; 4, "four"])
     |> map (fun (x,y) -> x, lsort (List.map snd y))

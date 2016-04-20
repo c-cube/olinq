@@ -368,6 +368,9 @@ type (_, _, _) binary =
       -> ('a, 'b, 'c) binary
   | GroupJoin :
       ('a, 'b) group_join_descr
+      -> ('a, 'b, 'a * 'b list) binary
+  | GroupJoin_refl :
+      ('a, 'b) group_join_descr
       -> ('a, 'b, ('a, 'b list) M.t) binary
   | Product : ('a, 'b, ('a*'b)) binary
   | Append : ('a, 'a, 'a) binary
@@ -455,7 +458,8 @@ let do_binary
   : type a b c. (a, b, c) binary -> a Iterable.t -> b Iterable.t -> c Iterable.t
   = fun b c1 c2 -> match b with
     | Join join -> Iterable.do_join ~join c1 c2
-    | GroupJoin gjoin -> Iterable.return (Iterable.do_group_join ~gjoin c1 c2)
+    | GroupJoin gjoin -> Iterable.of_map (Iterable.do_group_join ~gjoin c1 c2)
+    | GroupJoin_refl gjoin -> Iterable.return (Iterable.do_group_join ~gjoin c1 c2)
     | Product -> Iterable.product c1 c2
     | Append -> Iterable.append c1 c2
     | App -> Iterable.app c1 c2
@@ -677,9 +681,13 @@ let group_join ?cmp ?eq ?hash gjoin_proj q1 q2 =
   } in
   Binary (GroupJoin j, q1, q2)
 
-let group_join' ?cmp ?eq ?hash gjoin_proj q1 q2 =
-  let q = group_join ?cmp ?eq ?hash gjoin_proj q1 q2 in
-  flat_map_seq M.to_seq q
+let group_join_reflect ?cmp ?eq ?hash gjoin_proj q1 q2 =
+  let gjoin_build_src = M.Build.src_of_args ?eq ?hash ?cmp () in
+  let j = {
+    gjoin_proj;
+    gjoin_build_src;
+  } in
+  Binary (GroupJoin_refl j, q1, q2)
 
 let product q1 q2 = Binary (Product, q1, q2)
 
