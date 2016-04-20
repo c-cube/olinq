@@ -15,7 +15,8 @@
 <link title="OLinq_map" rel="Chapter" href="OLinq_map.html">
 <link title="OLinq" rel="Chapter" href="OLinq.html">
 <link title="OLinq_table" rel="Chapter" href="OLinq_table.html">
-<link title="OLinq_vec" rel="Chapter" href="OLinq_vec.html"><link title="Main Type" rel="Section" href="#2_MainType">
+<link title="OLinq_vec" rel="Chapter" href="OLinq_vec.html"><link title="Polymorphic Maps" rel="Section" href="#2_PolymorphicMaps">
+<link title="Main Type" rel="Section" href="#2_MainType">
 <link title="Initial values" rel="Section" href="#2_Initialvalues">
 <link title="Execution" rel="Subsection" href="#6_Execution">
 <link title="Basics" rel="Subsection" href="#6_Basics">
@@ -100,10 +101,11 @@
 <pre><span id="TYPEor_error"><span class="keyword">type</span> <code class="type">'a</code> or_error</span> = <code class="type">[ `Error of string | `Ok of 'a ]</code> </pre>
 
 
-<pre><span class="keyword">module</span> <a href="OLinq.Iterable.html">Iterable</a>: <code class="code">sig</code> <a href="OLinq.Iterable.html">..</a> <code class="code">end</code></pre>
-<pre><span class="keyword">module</span> <a href="OLinq.M.html">M</a>: <code class="type"><a href="OLinq_map.html">OLinq_map</a></code></pre><div class="info">
-Polymorphic Maps
-</div>
+<pre><span class="keyword">module</span> <a href="OLinq.Iterable.html">Iterable</a>: <code class="code">sig</code> <a href="OLinq.Iterable.html">..</a> <code class="code">end</code></pre><br>
+<h2 id="2_PolymorphicMaps">Polymorphic Maps</h2><br>
+
+<pre><span id="TYPEmap"><span class="keyword">type</span> <code class="type">('a, 'b)</code> map</span> = <code class="type">('a, 'b) <a href="OLinq_map.html#TYPEt">OLinq_map.t</a></code> </pre>
+
 <br>
 <h2 id="2_MainType">Main Type</h2><br>
 
@@ -165,11 +167,11 @@ Query that returns the elements of the given sequence.<br>
 Traverse the characters of the string<br>
 </div>
 
-<pre><span id="VALof_map"><span class="keyword">val</span> of_map</span> : <code class="type">('a, 'b) M.t -> ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<pre><span id="VALof_map"><span class="keyword">val</span> of_map</span> : <code class="type">('a, 'b) <a href="OLinq.html#TYPEmap">map</a> -> ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
 <code class="code">of_map m</code> yields each binding of <code class="code">m</code><br>
 </div>
 
-<pre><span id="VALof_multimap"><span class="keyword">val</span> of_multimap</span> : <code class="type">('a, 'b list) M.t -> ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<pre><span id="VALof_multimap"><span class="keyword">val</span> of_multimap</span> : <code class="type">('a, 'b list) <a href="OLinq.html#TYPEmap">map</a> -> ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
 <code class="code">of_multimap m</code> yields each single binding of <code class="code">m</code><br>
 </div>
 <br>
@@ -234,8 +236,8 @@ map each element to a collection and flatten the result<br>
 
 <pre><span id="VALflatten_list"><span class="keyword">val</span> flatten_list</span> : <code class="type">('a list, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
 <pre><span id="VALflatten_seq"><span class="keyword">val</span> flatten_seq</span> : <code class="type">('a <a href="OLinq.html#TYPEsequence">sequence</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
-<pre><span id="VALflatten_map"><span class="keyword">val</span> flatten_map</span> : <code class="type">(('a, 'b) M.t, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
-<pre><span id="VALflatten_multimap"><span class="keyword">val</span> flatten_multimap</span> : <code class="type">(('a, 'b list) M.t, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALflatten_map"><span class="keyword">val</span> flatten_map</span> : <code class="type">(('a, 'b) <a href="OLinq.html#TYPEmap">map</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
+<pre><span id="VALflatten_multimap"><span class="keyword">val</span> flatten_multimap</span> : <code class="type">(('a, 'b list) <a href="OLinq.html#TYPEmap">map</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a * 'b, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
 <pre><span id="VALtake"><span class="keyword">val</span> take</span> : <code class="type">int -> ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
 Take at most <code class="code">n</code> elements<br>
 </div>
@@ -272,7 +274,7 @@ Remove duplicate elements from the input collection.
     image by <code class="code">f</code> are grouped in the same list.<br>
 </div>
 
-<pre><span id="VALgroup_by_reflect"><span class="keyword">val</span> group_by_reflect</span> : <code class="type">?cmp:'b <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'b <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'b <a href="OLinq.html#TYPEhash">hash</a> -><br>       ('a -> 'b) -><br>       ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (('b, 'a list) M.t, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<pre><span id="VALgroup_by_reflect"><span class="keyword">val</span> group_by_reflect</span> : <code class="type">?cmp:'b <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'b <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'b <a href="OLinq.html#TYPEhash">hash</a> -><br>       ('a -> 'b) -><br>       ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (('b, 'a list) <a href="OLinq.html#TYPEmap">map</a>, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
 <code class="code">group_by_reflect f</code> takes a collection <code class="code">c</code> as input, and returns
     a multimap <code class="code">m</code> such that for each <code class="code">x</code> in <code class="code">c</code>, <code class="code">x</code> occurs in <code class="code">m</code> under the
     key <code class="code">f x</code>.
@@ -285,7 +287,7 @@ Remove duplicate elements from the input collection.
     occur, and returns pairs of <code class="code">x, count(x)</code><br>
 </div>
 
-<pre><span id="VALcount_reflect"><span class="keyword">val</span> count_reflect</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       unit -><br>       ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (('a, int) M.t, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<pre><span id="VALcount_reflect"><span class="keyword">val</span> count_reflect</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       unit -><br>       ('a, [ `Any ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (('a, int) <a href="OLinq.html#TYPEmap">map</a>, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
 <code class="code">count_reflect c</code> returns a map from elements of <code class="code">c</code> to the number
     of time those elements occur.<br>
 </div>
@@ -327,7 +329,7 @@ Fold over the collection<br>
     are mapped to <code class="code">[]</code><br>
 </div>
 
-<pre><span id="VALgroup_join_reflect"><span class="keyword">val</span> group_join_reflect</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       ('b -> 'a) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('b, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (('a, 'b list) M.t, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<pre><span id="VALgroup_join_reflect"><span class="keyword">val</span> group_join_reflect</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       ('b -> 'a) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('b, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       (('a, 'b list) <a href="OLinq.html#TYPEmap">map</a>, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
 Same as <a href="OLinq.html#VALgroup_join"><code class="code">OLinq.group_join</code></a>, but reflects the groups as a multimap<br>
 </div>
 

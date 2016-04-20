@@ -44,9 +44,9 @@ Convert a string into a collection of lines<br>
 Convert each string into a list of lines<br>
 </div>
 
-<pre><span id="VALjoin"><span class="keyword">val</span> join</span> : <code class="type">string -><br>       (string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -><br>       (string, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a></code></pre><div class="info ">
-<code class="code">join sep q</code> joins all the strings in <code class="code">q</code> together,
-      similar to <code class="code">String.join sep (run_list q)</code> basically.<br>
+<pre><span id="VALconcat"><span class="keyword">val</span> concat</span> : <code class="type">string -><br>       (string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -><br>       (string, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a></code></pre><div class="info ">
+<code class="code">concat sep q</code> joins all the strings in <code class="code">q</code> together,
+      similar to <code class="code">String.concat sep (run_list q)</code> basically.<br>
 </div>
 
 <pre><span id="VALunlines"><span class="keyword">val</span> unlines</span> : <code class="type">(string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -><br>       (string, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a></code></pre><div class="info ">

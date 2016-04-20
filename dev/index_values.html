@@ -108,6 +108,12 @@ Choose one element (if any, otherwise empty) in the collection.
 <td></td></tr>
 <tr><td><a href="OLinq_table.Data.html#VALcompare">compare</a> [<a href="OLinq_table.Data.html">OLinq_table.Data</a>]</td>
 <td></td></tr>
+<tr><td><a href="OLinq.IO.html#VALconcat">concat</a> [<a href="OLinq.IO.html">OLinq.IO</a>]</td>
+<td><div class="info">
+<code class="code">concat sep q</code> joins all the strings in <code class="code">q</code> together,
+      similar to <code class="code">String.concat sep (run_list q)</code> basically.
+</div>
+</td></tr>
 <tr><td><a href="OLinq.html#VALcontains">contains</a> [<a href="OLinq.html">OLinq</a>]</td>
 <td><div class="info">
 <code class="code">contains x q</code> returns <code class="code">true</code> if <code class="code">x</code> is among the elements returned
@@ -116,12 +122,16 @@ Choose one element (if any, otherwise empty) in the collection.
 </td></tr>
 <tr><td><a href="OLinq.html#VALcount">count</a> [<a href="OLinq.html">OLinq</a>]</td>
 <td><div class="info">
-<code class="code">count c</code> returns a map from elements of <code class="code">c</code> to the number
+<code class="code">count c</code> counts how many times each element of the collection
+    occur, and returns pairs of <code class="code">x, count(x)</code>
+</div>
+</td></tr>
+<tr><td><a href="OLinq.html#VALcount_reflect">count_reflect</a> [<a href="OLinq.html">OLinq</a>]</td>
+<td><div class="info">
+<code class="code">count_reflect c</code> returns a map from elements of <code class="code">c</code> to the number
     of time those elements occur.
 </div>
 </td></tr>
-<tr><td><a href="OLinq.html#VALcount'">count'</a> [<a href="OLinq.html">OLinq</a>]</td>
-<td></td></tr>
 <tr><td><a href="OLinq_map.html#VALcount_seq">count_seq</a> [<a href="OLinq_map.html">OLinq_map</a>]</td>
 <td></td></tr>
 <tr><td><a href="OLinq_vec.html#VALcreate">create</a> [<a href="OLinq_vec.html">OLinq_vec</a>]</td>
@@ -284,13 +294,17 @@ Select a key from a map and wrap into sequence
 </td></tr>
 <tr><td><a href="OLinq.html#VALgroup_by">group_by</a> [<a href="OLinq.html">OLinq</a>]</td>
 <td><div class="info">
-<code class="code">group_by f</code> takes a collection <code class="code">c</code> as input, and returns
-    a multimap <code class="code">m</code> such that for each <code class="code">x</code> in <code class="code">c</code>,
-    <code class="code">x</code> occurs in <code class="code">m</code> under the key <code class="code">f x</code>.
+<code class="code">group_by f</code> takes a collection <code class="code">c</code> as input, and returns a collection
+    of pairs <code class="code">k, l</code> where every element <code class="code">x</code> of <code class="code">l</code> satifies <code class="code">f x = k</code>.
 </div>
 </td></tr>
-<tr><td><a href="OLinq.html#VALgroup_by'">group_by'</a> [<a href="OLinq.html">OLinq</a>]</td>
-<td></td></tr>
+<tr><td><a href="OLinq.html#VALgroup_by_reflect">group_by_reflect</a> [<a href="OLinq.html">OLinq</a>]</td>
+<td><div class="info">
+<code class="code">group_by_reflect f</code> takes a collection <code class="code">c</code> as input, and returns
+    a multimap <code class="code">m</code> such that for each <code class="code">x</code> in <code class="code">c</code>, <code class="code">x</code> occurs in <code class="code">m</code> under the
+    key <code class="code">f x</code>.
+</div>
+</td></tr>
 <tr><td><a href="OLinq.html#VALgroup_join">group_join</a> [<a href="OLinq.html">OLinq</a>]</td>
 <td><div class="info">
 <code class="code">group_join key2</code> associates to every element <code class="code">x</code> of
@@ -298,9 +312,9 @@ Select a key from a map and wrap into sequence
     collection such that <code class="code">eq x (key y)</code>.
 </div>
 </td></tr>
-<tr><td><a href="OLinq.html#VALgroup_join'">group_join'</a> [<a href="OLinq.html">OLinq</a>]</td>
+<tr><td><a href="OLinq.html#VALgroup_join_reflect">group_join_reflect</a> [<a href="OLinq.html">OLinq</a>]</td>
 <td><div class="info">
-Same as <a href="OLinq.html#VALgroup_join"><code class="code">OLinq.group_join</code></a>, but then flatten the map
+Same as <a href="OLinq.html#VALgroup_join"><code class="code">OLinq.group_join</code></a>, but reflects the groups as a multimap
 </div>
 </td></tr>
 <tr><td align="left"><br>I</td></tr>
@@ -335,12 +349,6 @@ View a multimap as a proper collection
 <tr><td><a href="OLinq_table.html#VALiteri">iteri</a> [<a href="OLinq_table.html">OLinq_table</a>]</td>
 <td></td></tr>
 <tr><td align="left"><br>J</td></tr>
-<tr><td><a href="OLinq.IO.html#VALjoin">join</a> [<a href="OLinq.IO.html">OLinq.IO</a>]</td>
-<td><div class="info">
-<code class="code">join sep q</code> joins all the strings in <code class="code">q</code> together,
-      similar to <code class="code">String.join sep (run_list q)</code> basically.
-</div>
-</td></tr>
 <tr><td><a href="OLinq.html#VALjoin">join</a> [<a href="OLinq.html">OLinq</a>]</td>
 <td><div class="info">
 <code class="code">join key1 key2 ~merge</code> is a binary operation
