@@ -53,6 +53,7 @@ type 'a equal = 'a -> 'a -> bool
 type 'a ord = 'a -> 'a -> int
 type 'a hash = 'a -> int
 type 'a or_error = [`Ok of 'a | `Error of string ]
+type 'a printer = Format.formatter -> 'a -> unit
 
 (* some helpers *)
 (*$inject
@@ -511,5 +512,7 @@ module IO : sig
   val to_file_lines_exn : string -> (string, _) t -> unit
 end
 
-(* TODO printer, table printer, ... ? *)
+val print : ?sep:string -> 'a printer -> ('a,_) t printer
+(** Evaluate the sequence of elements and print them
+    @since NEXT_RELEASE *)
 

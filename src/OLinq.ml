@@ -8,6 +8,7 @@ type 'a equal = 'a -> 'a -> bool
 type 'a ord = 'a -> 'a -> int
 type 'a hash = 'a -> int
 type 'a or_error = [`Ok of 'a | `Error of string ]
+type 'a printer = Format.formatter -> 'a -> unit
 
 let id_ x = x
 let (|>) x f = f x
@@ -933,3 +934,14 @@ module IO = struct
     try `Ok (with_out filename (fun oc  -> out_lines oc q))
     with Failure s -> `Error s
 end
+
+let print ?(sep=", ") pp out q =
+  let rec pp_list l = match l with
+    | x::((_::_) as l) ->
+      Format.fprintf out "%a%s@," pp x sep;
+      pp_list l
+    | x::[] -> pp out x
+    | [] -> ()
+  in
+  let l = run_list q in
+  pp_list l
