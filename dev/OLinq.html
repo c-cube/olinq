@@ -101,6 +101,9 @@
 <pre><span id="TYPEor_error"><span class="keyword">type</span> <code class="type">'a</code> or_error</span> = <code class="type">[ `Error of string | `Ok of 'a ]</code> </pre>
 
 
+<pre><span id="TYPEprinter"><span class="keyword">type</span> <code class="type">'a</code> printer</span> = <code class="type">Format.formatter -> 'a -> unit</code> </pre>
+
+
 <pre><span class="keyword">module</span> <a href="OLinq.Iterable.html">Iterable</a>: <code class="code">sig</code> <a href="OLinq.Iterable.html">..</a> <code class="code">end</code></pre><br>
 <h2 id="2_PolymorphicMaps">Polymorphic Maps</h2><br>
 
@@ -321,6 +324,21 @@ Fold over the collection<br>
     of values is discarded.<br>
 </div>
 
+<pre><span id="VALouter_join"><span class="keyword">val</span> outer_join</span> : <code class="type">?cmp:'key <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'key <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'key <a href="OLinq.html#TYPEhash">hash</a> -><br>       ('a -> 'key) -><br>       ('b -> 'key) -><br>       merge:('key -> 'a list -> 'b list -> 'c option) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('b, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -> ('c, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">outer_join key1 key2 ~merge</code> is a binary operation
+    that takes two collections <code class="code">a</code> and <code class="code">b</code>, projects their
+    elements resp. with <code class="code">key1</code> and <code class="code">key2</code>, and, for each key <code class="code">k</code>
+    occurring in at least one of them:<ul>
+<li>compute the list <code class="code">l1</code> of elements of <code class="code">a</code> that map to <code class="code">k</code></li>
+<li>compute the list <code class="code">l2</code> of elements of <code class="code">b</code> that map to <code class="code">k</code></li>
+<li>call <code class="code">merge k l1 l2</code>. If <code class="code">merge</code> returns <code class="code">None</code>, the combination
+      of values is discarded, otherwise it returns <code class="code">Some c</code>
+      and <code class="code">c</code> is inserted in the result.</li>
+</ul>
+<br>
+<b>Since</b> NEXT_RELEASE<br>
+</div>
+
 <pre><span id="VALgroup_join"><span class="keyword">val</span> group_join</span> : <code class="type">?cmp:'a <a href="OLinq.html#TYPEord">ord</a> -><br>       ?eq:'a <a href="OLinq.html#TYPEequal">equal</a> -><br>       ?hash:'a <a href="OLinq.html#TYPEhash">hash</a> -><br>       ('b -> 'a) -><br>       ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('b, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a * 'b list, [ `Any ]) <a href="OLinq.html#TYPEt">t</a></code></pre><div class="info ">
 <code class="code">group_join key2</code> associates to every element <code class="code">x</code> of
     the first collection, all the elements <code class="code">y</code> of the second
@@ -432,4 +450,9 @@ Build a hashtable from the collection<br>
 <pre><span id="VALreflect_stack"><span class="keyword">val</span> reflect_stack</span> : <code class="type">('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> -><br>       ('a Stack.t, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">t</a></code></pre>
 <pre><span class="keyword">module</span> <a href="OLinq.AdaptSet.html">AdaptSet</a>: <div class="sig_block"><code class="code">functor (</code><code class="code">S</code><code class="code"> : </code><code class="type">Set.S</code><code class="code">) -&gt; </code><code class="code">sig</code> <a href="OLinq.AdaptSet.html">..</a> <code class="code">end</code></div></pre>
 <pre><span class="keyword">module</span> <a href="OLinq.AdaptMap.html">AdaptMap</a>: <div class="sig_block"><code class="code">functor (</code><code class="code">M</code><code class="code"> : </code><code class="type">Map.S</code><code class="code">) -&gt; </code><code class="code">sig</code> <a href="OLinq.AdaptMap.html">..</a> <code class="code">end</code></div></pre>
-<pre><span class="keyword">module</span> <a href="OLinq.IO.html">IO</a>: <code class="code">sig</code> <a href="OLinq.IO.html">..</a> <code class="code">end</code></pre></body></html>
+<pre><span class="keyword">module</span> <a href="OLinq.IO.html">IO</a>: <code class="code">sig</code> <a href="OLinq.IO.html">..</a> <code class="code">end</code></pre>
+<pre><span id="VALprint"><span class="keyword">val</span> print</span> : <code class="type">?sep:string -><br>       'a <a href="OLinq.html#TYPEprinter">printer</a> -> ('a, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">t</a> <a href="OLinq.html#TYPEprinter">printer</a></code></pre><div class="info ">
+Evaluate the sequence of elements and print them<br>
+<b>Since</b> NEXT_RELEASE<br>
+</div>
+</body></html>
