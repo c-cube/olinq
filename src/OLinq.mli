@@ -310,6 +310,21 @@ val join : ?cmp:'key ord -> ?eq:'key equal -> ?hash:'key hash ->
     using [merge]. If [merge] returns [None], the combination
     of values is discarded. *)
 
+val outer_join : ?cmp:'key ord -> ?eq:'key equal -> ?hash:'key hash ->
+  ('a -> 'key) -> ('b -> 'key) ->
+  merge:('key -> 'a list -> 'b list -> 'c option) ->
+  ('a, _) t -> ('b, _) t -> ('c, [`Any]) t
+(** [outer_join key1 key2 ~merge] is a binary operation
+    that takes two collections [a] and [b], projects their
+    elements resp. with [key1] and [key2], and, for each key [k]
+    occurring in at least one of them:
+    - compute the list [l1] of elements of [a] that map to [k]
+    - compute the list [l2] of elements of [b] that map to [k]
+    - call [merge k l1 l2]. If [merge] returns [None], the combination
+      of values is discarded, otherwise it returns [Some c]
+      and [c] is inserted in the result.
+    @since NEXT_RELEASE *)
+
 val group_join : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
   ('b -> 'a) -> ('a,_) t -> ('b,_) t ->
   ('a * 'b list, [`Any]) t

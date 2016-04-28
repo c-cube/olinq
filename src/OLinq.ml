@@ -50,6 +50,13 @@ type ('a,'b,'key,'c) join_descr = {
   join_build_src : 'key M.Build.src;
 }
 
+type ('a,'b,'key,'c) outer_join_descr = {
+  ojoin_key1 : 'a -> 'key;
+  ojoin_key2 : 'b -> 'key;
+  ojoin_merge : 'key -> 'a list -> 'b list -> 'c option;
+  ojoin_build_src : 'key M.Build.src;
+}
+
 type ('a,'b) group_join_descr = {
   gjoin_proj : 'b -> 'a;
   gjoin_build_src : 'a M.Build.src;
@@ -59,9 +66,6 @@ type ('a,'b) search_descr = {
   search_check: ('a -> 'b search_result);
   search_failure : 'b;
 }
-
-(* TODO deal with several possible containers as a 'a t,
-   including seq,vector, M... *)
 
 module Iterable = struct
   type 'a t =
@@ -240,6 +244,34 @@ module Iterable = struct
                  l1);
     of_vec v
 
+  (* all the pairs from left and right for a given key *)
+  type ('a, 'b) ojoin_cell = {
+    ojoin_left: 'a list;
+    ojoin_right: 'b list;
+  }
+
+  let do_outer_join ~ojoin c1 c2 =
+    let build = M.Build.of_src ojoin.ojoin_build_src in
+    (* build the map [key -> cell] *)
+    to_seq c1
+      (fun x ->
+         let k = ojoin.ojoin_key1 x in
+         M.Build.update build k ~or_:{ojoin_left=[x]; ojoin_right=[]}
+           ~f:(fun c -> {c with ojoin_left =x::c.ojoin_left }));
+    to_seq c2
+      (fun x ->
+         let k = ojoin.ojoin_key2 x in
+         M.Build.update build k ~or_:{ojoin_left=[]; ojoin_right=[x]}
+           ~f:(fun c -> {c with ojoin_right=x::c.ojoin_right}));
+    let m = M.Build.get build in
+    let v = Vec.create () in
+    M.to_seq m
+      (fun (k,cell) ->
+         match ojoin.ojoin_merge k cell.ojoin_left cell.ojoin_right with
+           | None -> ()
+           | Some res -> Vec.push v res);
+    of_vec v
+
   let do_group_join ~gjoin c1 c2 =
     let build = M.Build.of_src gjoin.gjoin_build_src in
     to_seq c1 (fun x -> M.Build.add build x []);
@@ -369,6 +401,9 @@ type (_, _, _) binary =
   | Join :
       ('a, 'b, 'key, 'c) join_descr
       -> ('a, 'b, 'c) binary
+  | OuterJoin :
+      ('a, 'b, 'key, 'c) outer_join_descr
+      -> ('a, 'b, 'c) binary
   | GroupJoin :
       ('a, 'b) group_join_descr
       -> ('a, 'b, 'a * 'b list) binary
@@ -461,6 +496,7 @@ let do_binary
   : type a b c. (a, b, c) binary -> a Iterable.t -> b Iterable.t -> c Iterable.t
   = fun b c1 c2 -> match b with
     | Join join -> Iterable.do_join ~join c1 c2
+    | OuterJoin ojoin -> Iterable.do_outer_join ~ojoin c1 c2
     | GroupJoin gjoin -> Iterable.of_map (Iterable.do_group_join ~gjoin c1 c2)
     | GroupJoin_refl gjoin -> Iterable.return (Iterable.do_group_join ~gjoin c1 c2)
     | Product -> Iterable.product c1 c2
@@ -675,6 +711,16 @@ let join ?cmp ?eq ?hash join_key1 join_key2 ~merge q1 q2 =
     join_build_src;
   } in
   Binary (Join j, q1, q2)
+
+let outer_join ?cmp ?eq ?hash ojoin_key1 ojoin_key2 ~merge q1 q2 =
+  let ojoin_build_src = M.Build.src_of_args ?eq ?hash ?cmp () in
+  let j = {
+    ojoin_key1;
+    ojoin_key2;
+    ojoin_merge=merge;
+    ojoin_build_src;
+  } in
+  Binary (OuterJoin j, q1, q2)
 
 let group_join ?cmp ?eq ?hash gjoin_proj q1 q2 =
   let gjoin_build_src = M.Build.src_of_args ?eq ?hash ?cmp () in
