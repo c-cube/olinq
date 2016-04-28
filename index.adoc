@@ -1,0 +1,9 @@
+= OLinq
+
+In-memory query language for collections in OCaml.
+
+Documentation:
+
+- link:dev/[dev]
+- link:0.1/[0.1]
+
