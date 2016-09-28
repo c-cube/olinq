@@ -323,7 +323,7 @@ val outer_join : ?cmp:'key ord -> ?eq:'key equal -> ?hash:'key hash ->
     - call [merge k l1 l2]. If [merge] returns [None], the combination
       of values is discarded, otherwise it returns [Some c]
       and [c] is inserted in the result.
-    @since NEXT_RELEASE *)
+    @since 0.2 *)
 
 val group_join : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
   ('b -> 'a) -> ('a,_) t -> ('b,_) t ->
@@ -529,5 +529,5 @@ end
 
 val print : ?sep:string -> 'a printer -> ('a,_) t printer
 (** Evaluate the sequence of elements and print them
-    @since NEXT_RELEASE *)
+    @since 0.2 *)
 

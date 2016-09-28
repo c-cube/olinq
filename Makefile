@@ -54,8 +54,7 @@ doc_commit: doc
 
 all: build test doc
 
-# FIXME update
-VERSION=$(shell awk '/^Version:/ {print $$2}' _oasis)
+VERSION ?= dev
 
 update_next_tag:
 	@echo "update version to $(VERSION)..."
