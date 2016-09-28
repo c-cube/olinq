@@ -1,0 +1,66 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link rel="previous" href="OLinq.AdaptMap.html">
+<link rel="Up" href="OLinq.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of exceptions" rel=Appendix href="index_exceptions.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="OLinq_json" rel="Chapter" href="OLinq_json.html">
+<link title="OLinq_map" rel="Chapter" href="OLinq_map.html">
+<link title="OLinq" rel="Chapter" href="OLinq.html">
+<link title="OLinq_table" rel="Chapter" href="OLinq_table.html">
+<link title="OLinq_vec" rel="Chapter" href="OLinq_vec.html"><link title="Run methods" rel="Section" href="#8_Runmethods">
+<title>OLinq.IO</title>
+</head>
+<body>
+<div class="navbar"><a class="pre" href="OLinq.AdaptMap.html" title="OLinq.AdaptMap">Previous</a>
+&nbsp;<a class="up" href="OLinq.html" title="OLinq">Up</a>
+&nbsp;</div>
+<h1>Module <a href="type_OLinq.IO.html">OLinq.IO</a></h1>
+
+<pre><span class="keyword">module</span> IO: <code class="code">sig</code> <a href="OLinq.IO.html">..</a> <code class="code">end</code></pre><hr width="100%">
+
+<pre><span id="VALread_chan"><span class="keyword">val</span> read_chan</span> : <code class="type">Pervasives.in_channel -><br>       (string, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a></code></pre><div class="info ">
+Read the content of the whole channel in (blocking), returning the
+      corresponding string. The channel will be read at most once
+      during execution, and its content cached; however the channel
+      might never get read because evaluation is lazy.<br>
+</div>
+
+<pre><span id="VALread_file"><span class="keyword">val</span> read_file</span> : <code class="type">string -> (string, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a></code></pre><div class="info ">
+Read a whole file (given by name) and return its content as a string<br>
+</div>
+
+<pre><span id="VALlines"><span class="keyword">val</span> lines</span> : <code class="type">(string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -> (string, [ `Any ]) <a href="OLinq.html#TYPEt">OLinq.t</a></code></pre><div class="info ">
+Convert a string into a collection of lines<br>
+</div>
+
+<pre><span id="VALlines_l"><span class="keyword">val</span> lines_l</span> : <code class="type">(string, [< `Any | `AtMostOne | `One ] as 'a) <a href="OLinq.html#TYPEt">OLinq.t</a> -><br>       (string list, 'a) <a href="OLinq.html#TYPEt">OLinq.t</a></code></pre><div class="info ">
+Convert each string into a list of lines<br>
+</div>
+
+<pre><span id="VALconcat"><span class="keyword">val</span> concat</span> : <code class="type">string -><br>       (string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -><br>       (string, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a></code></pre><div class="info ">
+<code class="code">concat sep q</code> joins all the strings in <code class="code">q</code> together,
+      similar to <code class="code">String.concat sep (run_list q)</code> basically.<br>
+</div>
+
+<pre><span id="VALunlines"><span class="keyword">val</span> unlines</span> : <code class="type">(string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -><br>       (string, [< `Any | `AtMostOne | `One > `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a></code></pre><div class="info ">
+Join lines together<br>
+</div>
+
+<pre><span id="VALout"><span class="keyword">val</span> out</span> : <code class="type">Pervasives.out_channel -><br>       (string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -> unit</code></pre>
+<pre><span id="VALout_lines"><span class="keyword">val</span> out_lines</span> : <code class="type">Pervasives.out_channel -><br>       (string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -> unit</code></pre><div class="info ">
+Evaluate the query and print it line by line on the output<br>
+</div>
+<br>
+<div class="h8" id="8_Runmethods">Run methods</div><br>
+
+<pre><span id="VALto_file"><span class="keyword">val</span> to_file</span> : <code class="type">string -><br>       (string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -> unit <a href="OLinq.html#TYPEor_error">OLinq.or_error</a></code></pre>
+<pre><span id="VALto_file_exn"><span class="keyword">val</span> to_file_exn</span> : <code class="type">string -> (string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -> unit</code></pre>
+<pre><span id="VALto_file_lines"><span class="keyword">val</span> to_file_lines</span> : <code class="type">string -><br>       (string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -> unit <a href="OLinq.html#TYPEor_error">OLinq.or_error</a></code></pre>
+<pre><span id="VALto_file_lines_exn"><span class="keyword">val</span> to_file_lines_exn</span> : <code class="type">string -> (string, [< `Any | `AtMostOne | `One ]) <a href="OLinq.html#TYPEt">OLinq.t</a> -> unit</code></pre></body></html>

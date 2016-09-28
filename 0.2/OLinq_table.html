@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link rel="previous" href="OLinq.html">
+<link rel="next" href="OLinq_vec.html">
+<link rel="Up" href="index.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of exceptions" rel=Appendix href="index_exceptions.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="OLinq_json" rel="Chapter" href="OLinq_json.html">
+<link title="OLinq_map" rel="Chapter" href="OLinq_map.html">
+<link title="OLinq" rel="Chapter" href="OLinq.html">
+<link title="OLinq_table" rel="Chapter" href="OLinq_table.html">
+<link title="OLinq_vec" rel="Chapter" href="OLinq_vec.html"><link title="Scalar Value" rel="Section" href="#2_ScalarValue">
+<link title="A row of values" rel="Section" href="#2_Arowofvalues">
+<link title="A Table, that is, an extensible list of Rows" rel="Section" href="#2_ATablethatisanextensiblelistofRows">
+<title>OLinq_table</title>
+</head>
+<body>
+<div class="navbar"><a class="pre" href="OLinq.html" title="OLinq">Previous</a>
+&nbsp;<a class="up" href="index.html" title="Index">Up</a>
+&nbsp;<a class="post" href="OLinq_vec.html" title="OLinq_vec">Next</a>
+</div>
+<h1>Module <a href="type_OLinq_table.html">OLinq_table</a></h1>
+
+<pre><span class="keyword">module</span> OLinq_table: <code class="code">sig</code> <a href="OLinq_table.html">..</a> <code class="code">end</code></pre><div class="info module top">
+<h1 id="1_GenericPurposetable">Generic-Purpose table</h1>
+<p>
+
+    This table is designed for holding relational data over scalar
+    values (strings, intergers, bools, etc.).
+    It trades type-safety for flexibility, and should be well-suited to
+    dealing with CSV-encoded data.
+<p>
+
+    <b>STATUS: EXPERIMENTAL</b><br>
+</div>
+<hr width="100%">
+
+<pre><span id="TYPEprinter"><span class="keyword">type</span> <code class="type">'a</code> printer</span> = <code class="type">Format.formatter -> 'a -> unit</code> </pre>
+
+
+<pre><span id="TYPEsequence"><span class="keyword">type</span> <code class="type">'a</code> sequence</span> = <code class="type">('a -> unit) -> unit</code> </pre>
+
+<br>
+<h2 id="2_ScalarValue">Scalar Value</h2><br>
+
+<pre><code><span id="TYPEdata"><span class="keyword">type</span> <code class="type"></code>data</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTdata.S"><span class="constructor">S</span></span> <span class="keyword">of</span> <code class="type">string</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTdata.I"><span class="constructor">I</span></span> <span class="keyword">of</span> <code class="type">int</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTdata.B"><span class="constructor">B</span></span> <span class="keyword">of</span> <code class="type">bool</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTdata.F"><span class="constructor">F</span></span> <span class="keyword">of</span> <code class="type">float</code></code></td>
+
+</tr></table>
+
+
+
+<pre><span class="keyword">module</span> <a href="OLinq_table.Data.html">Data</a>: <code class="code">sig</code> <a href="OLinq_table.Data.html">..</a> <code class="code">end</code></pre>
+<pre><span id="VALint"><span class="keyword">val</span> int</span> : <code class="type">int -> <a href="OLinq_table.html#TYPEdata">data</a></code></pre>
+<pre><span id="VALfloat"><span class="keyword">val</span> float</span> : <code class="type">float -> <a href="OLinq_table.html#TYPEdata">data</a></code></pre>
+<pre><span id="VALbool"><span class="keyword">val</span> bool</span> : <code class="type">bool -> <a href="OLinq_table.html#TYPEdata">data</a></code></pre>
+<pre><span id="VALstring"><span class="keyword">val</span> string</span> : <code class="type">string -> <a href="OLinq_table.html#TYPEdata">data</a></code></pre><br>
+<h2 id="2_Arowofvalues">A row of values</h2><br>
+
+<pre><span id="TYPErow"><span class="keyword">type</span> <code class="type"></code>row</span> = <code class="type"><a href="OLinq_table.html#TYPEdata">data</a> array</code> </pre>
+
+
+<pre><span id="EXCEPTIONIndexError"><span class="keyword">exception</span> IndexError</span></pre>
+
+<pre><span class="keyword">module</span> <a href="OLinq_table.Row.html">Row</a>: <code class="code">sig</code> <a href="OLinq_table.Row.html">..</a> <code class="code">end</code></pre><br>
+<h2 id="2_ATablethatisanextensiblelistofRows">A Table, that is, an extensible list of Rows</h2><br>
+
+<pre><span id="EXCEPTIONDimError"><span class="keyword">exception</span> DimError</span></pre>
+<div class="info ">
+Raised in case dimensions don't match<br>
+</div>
+
+<pre><span id="TYPEt"><span class="keyword">type</span> <code class="type"></code>t</span> </pre>
+
+
+<pre><span id="VALcreate"><span class="keyword">val</span> create</span> : <code class="type">?size:int -> names:string array -> unit -> <a href="OLinq_table.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">create ~names ()</code> creates a new table with columns
+    labelled with <code class="code">names</code><br>
+</div>
+
+<pre><span id="VALinit"><span class="keyword">val</span> init</span> : <code class="type">names:string array -> int -> (int -> <a href="OLinq_table.html#TYPErow">row</a>) -> <a href="OLinq_table.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">init ~names n f</code> makes a table with <code class="code">size</code> rows,
+    each initialized from <code class="code">f</code><br>
+<b>Raises</b> <code>DimError</code> if some row returned by <code class="code">f</code> doesn't have
+    the same size as <code class="code">names</code><br>
+</div>
+
+<pre><span id="VALmake"><span class="keyword">val</span> make</span> : <code class="type">names:string array -> int -> <a href="OLinq_table.html#TYPErow">row</a> -> <a href="OLinq_table.html#TYPEt">t</a></code></pre><div class="info ">
+<code class="code">init ~names n row</code> makes a table with <code class="code">size</code> rows, all equal to <code class="code">row</code><br>
+<b>Raises</b> <code>DimError</code> if <code class="code">Row.size row &lt;&gt; length names</code><br>
+</div>
+
+<pre><span id="VALnum_rows"><span class="keyword">val</span> num_rows</span> : <code class="type"><a href="OLinq_table.html#TYPEt">t</a> -> int</code></pre>
+<pre><span id="VALnum_cols"><span class="keyword">val</span> num_cols</span> : <code class="type"><a href="OLinq_table.html#TYPEt">t</a> -> int</code></pre>
+<pre><span id="VALsize"><span class="keyword">val</span> size</span> : <code class="type"><a href="OLinq_table.html#TYPEt">t</a> -> int</code></pre><div class="info ">
+Alias to <a href="OLinq_table.html#VALnum_rows"><code class="code">OLinq_table.num_rows</code></a><br>
+</div>
+
+<pre><span id="VALnames"><span class="keyword">val</span> names</span> : <code class="type"><a href="OLinq_table.html#TYPEt">t</a> -> string array</code></pre><div class="info ">
+Access the column names.
+    Should not be modified<br>
+</div>
+
+<pre><span id="VALget"><span class="keyword">val</span> get</span> : <code class="type">int -> <a href="OLinq_table.html#TYPEt">t</a> -> <a href="OLinq_table.html#TYPErow">row</a> option</code></pre><div class="info ">
+<code class="code">get n tbl</code> gets the <code class="code">n</code>-th row<br>
+</div>
+
+<pre><span id="VALget_exn"><span class="keyword">val</span> get_exn</span> : <code class="type">int -> <a href="OLinq_table.html#TYPEt">t</a> -> <a href="OLinq_table.html#TYPErow">row</a></code></pre><div class="info ">
+<b>Raises</b> <code>IndexError</code> if the index is invalid<br>
+</div>
+
+<pre><span id="VALget_cell"><span class="keyword">val</span> get_cell</span> : <code class="type">int -> int -> <a href="OLinq_table.html#TYPEt">t</a> -> <a href="OLinq_table.html#TYPEdata">data</a> option</code></pre><div class="info ">
+<code class="code">get_cell i j tbl</code> gets the <code class="code">j</code>-th value of the <code class="code">i</code>-th row<br>
+</div>
+
+<pre><span id="VALget_cell_exn"><span class="keyword">val</span> get_cell_exn</span> : <code class="type">int -> int -> <a href="OLinq_table.html#TYPEt">t</a> -> <a href="OLinq_table.html#TYPEdata">data</a></code></pre><div class="info ">
+<b>Raises</b> <code>IndexError</code> if the index is invalid<br>
+</div>
+
+<pre><span id="VALfold"><span class="keyword">val</span> fold</span> : <code class="type">f:('acc -> <a href="OLinq_table.html#TYPErow">row</a> -> 'acc) -> x:'acc -> <a href="OLinq_table.html#TYPEt">t</a> -> 'acc</code></pre>
+<pre><span id="VALiter"><span class="keyword">val</span> iter</span> : <code class="type">f:(<a href="OLinq_table.html#TYPErow">row</a> -> unit) -> <a href="OLinq_table.html#TYPEt">t</a> -> unit</code></pre>
+<pre><span id="VALiteri"><span class="keyword">val</span> iteri</span> : <code class="type">f:(int -> <a href="OLinq_table.html#TYPErow">row</a> -> unit) -> <a href="OLinq_table.html#TYPEt">t</a> -> unit</code></pre>
+<pre><span id="VALpush"><span class="keyword">val</span> push</span> : <code class="type"><a href="OLinq_table.html#TYPEt">t</a> -> <a href="OLinq_table.html#TYPErow">row</a> -> unit</code></pre><div class="info ">
+Push a row into the table<br>
+<b>Raises</b> <code>DimError</code> if the row has not the same dimension as table<br>
+</div>
+
+<pre><span id="VALpush_l"><span class="keyword">val</span> push_l</span> : <code class="type"><a href="OLinq_table.html#TYPEt">t</a> -> <a href="OLinq_table.html#TYPErow">row</a> list -> unit</code></pre><div class="info ">
+<b>Raises</b> <code>DimError</code> if some row has not the same dimension as table<br>
+</div>
+
+<pre><span id="VALpush_seq"><span class="keyword">val</span> push_seq</span> : <code class="type"><a href="OLinq_table.html#TYPEt">t</a> -> <a href="OLinq_table.html#TYPErow">row</a> <a href="OLinq_table.html#TYPEsequence">sequence</a> -> unit</code></pre><div class="info ">
+<b>Raises</b> <code>DimError</code> if some row has not the same dimension as table<br>
+</div>
+
+<pre><span id="VALto_seq"><span class="keyword">val</span> to_seq</span> : <code class="type"><a href="OLinq_table.html#TYPEt">t</a> -> <a href="OLinq_table.html#TYPErow">row</a> <a href="OLinq_table.html#TYPEsequence">sequence</a></code></pre>
+<pre><span id="VALto_list"><span class="keyword">val</span> to_list</span> : <code class="type"><a href="OLinq_table.html#TYPEt">t</a> -> <a href="OLinq_table.html#TYPErow">row</a> list</code></pre>
+<pre><span id="VALto_list_rev"><span class="keyword">val</span> to_list_rev</span> : <code class="type"><a href="OLinq_table.html#TYPEt">t</a> -> <a href="OLinq_table.html#TYPErow">row</a> list</code></pre>
+<pre><span id="VALprint"><span class="keyword">val</span> print</span> : <code class="type"><a href="OLinq_table.html#TYPEt">t</a> <a href="OLinq_table.html#TYPEprinter">printer</a></code></pre></body></html>

@@ -1,0 +1,73 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link rel="next" href="OLinq_map.html">
+<link rel="Up" href="index.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of exceptions" rel=Appendix href="index_exceptions.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="OLinq_json" rel="Chapter" href="OLinq_json.html">
+<link title="OLinq_map" rel="Chapter" href="OLinq_map.html">
+<link title="OLinq" rel="Chapter" href="OLinq.html">
+<link title="OLinq_table" rel="Chapter" href="OLinq_table.html">
+<link title="OLinq_vec" rel="Chapter" href="OLinq_vec.html"><title>OLinq_json</title>
+</head>
+<body>
+<div class="navbar">&nbsp;<a class="up" href="index.html" title="Index">Up</a>
+&nbsp;<a class="post" href="OLinq_map.html" title="OLinq_map">Next</a>
+</div>
+<h1>Module <a href="type_OLinq_json.html">OLinq_json</a></h1>
+
+<pre><span class="keyword">module</span> OLinq_json: <code class="code">sig</code> <a href="OLinq_json.html">..</a> <code class="code">end</code></pre><div class="info module top">
+<h1 id="1_InterfacetoYojson">Interface to Yojson</h1>
+<p>
+
+    The type <a href="OLinq_json.html#TYPEjson"><code class="code">OLinq_json.json</code></a> is basically <code class="code">Yojson.Safe.json</code>
+<p>
+
+    <b>STATUS: EXPERIMENTAL</b><br>
+</div>
+<hr width="100%">
+
+<pre><span id="TYPEquery"><span class="keyword">type</span> <code class="type">('a, [< `Any | `AtMostOne | `One ])</code> query</span> = <code class="type">('a, [< `Any | `AtMostOne | `One ] as 'b) <a href="OLinq.html#TYPEt">OLinq.t</a></code> </pre>
+
+
+<pre><span id="TYPEjson"><span class="keyword">type</span> <code class="type"></code>json</span> = <code class="type">[ `Assoc of (string * <a href="OLinq_json.html#TYPEjson">json</a>) list<br>       | `Bool of bool<br>       | `Float of float<br>       | `Int of int<br>       | `Intlit of string<br>       | `List of <a href="OLinq_json.html#TYPEjson">json</a> list<br>       | `Null<br>       | `String of string<br>       | `Tuple of <a href="OLinq_json.html#TYPEjson">json</a> list<br>       | `Variant of string * <a href="OLinq_json.html#TYPEjson">json</a> option ]</code> </pre>
+
+
+<pre><span id="VALas_list"><span class="keyword">val</span> as_list</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (<a href="OLinq_json.html#TYPEjson">json</a> list, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALas_assoc"><span class="keyword">val</span> as_assoc</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       ((string * <a href="OLinq_json.html#TYPEjson">json</a>) list, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALas_bool"><span class="keyword">val</span> as_bool</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (bool, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALas_int"><span class="keyword">val</span> as_int</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (int, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALas_int_lit"><span class="keyword">val</span> as_int_lit</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (string, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALas_float"><span class="keyword">val</span> as_float</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (float, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALas_null"><span class="keyword">val</span> as_null</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (unit, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALas_string"><span class="keyword">val</span> as_string</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (string, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALas_tuple"><span class="keyword">val</span> as_tuple</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (<a href="OLinq_json.html#TYPEjson">json</a> list, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALas_variant"><span class="keyword">val</span> as_variant</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (string * <a href="OLinq_json.html#TYPEjson">json</a> option, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALassoc"><span class="keyword">val</span> assoc</span> : <code class="type">string -><br>       (<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (<a href="OLinq_json.html#TYPEjson">json</a>, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre><div class="info ">
+Assuming the json is an object, obtain the given key, otherwise empty<br>
+</div>
+
+<pre><span id="VALenter_assoc"><span class="keyword">val</span> enter_assoc</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (string * <a href="OLinq_json.html#TYPEjson">json</a>, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALenter_list"><span class="keyword">val</span> enter_list</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One > `AtMostOne `One ])<br>       <a href="OLinq_json.html#TYPEquery">query</a> -> (<a href="OLinq_json.html#TYPEjson">json</a>, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre><div class="info ">
+If the json is a list, enter each of its element<br>
+</div>
+
+<pre><span id="VALenter_tuple"><span class="keyword">val</span> enter_tuple</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (<a href="OLinq_json.html#TYPEjson">json</a>, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALenter_tuple_index"><span class="keyword">val</span> enter_tuple_index</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a>, [< `Any | `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a> -><br>       (int * <a href="OLinq_json.html#TYPEjson">json</a>, [ `Any ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre>
+<pre><span id="VALmap_list"><span class="keyword">val</span> map_list</span> : <code class="type">(<a href="OLinq_json.html#TYPEjson">json</a> -> (<a href="OLinq_json.html#TYPEjson">json</a>, [ `One ]) <a href="OLinq_json.html#TYPEquery">query</a>) -><br>       <a href="OLinq_json.html#TYPEjson">json</a> -> (<a href="OLinq_json.html#TYPEjson">json</a>, [ `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre><div class="info ">
+<code class="code">map_list f j</code> maps <code class="code">f</code> over each element of <code class="code">j</code>, if <code class="code">j</code> is a list,
+    and replaces each element with the resulting json value, and wraps those
+    again into a json list<br>
+</div>
+
+<pre><span id="VALmap_assoc"><span class="keyword">val</span> map_assoc</span> : <code class="type">(string -> <a href="OLinq_json.html#TYPEjson">json</a> -> (<a href="OLinq_json.html#TYPEjson">json</a>, [ `One ]) <a href="OLinq_json.html#TYPEquery">query</a>) -><br>       <a href="OLinq_json.html#TYPEjson">json</a> -> (<a href="OLinq_json.html#TYPEjson">json</a>, [ `AtMostOne | `One ]) <a href="OLinq_json.html#TYPEquery">query</a></code></pre><div class="info ">
+<code class="code">map_assoc f j</code> maps each value of <code class="code">j</code>, assuming <code class="code">j</code> is an <code class="code">`Assoc</code>, and
+    wraps again in an assoc.<br>
+</div>
+</body></html>
