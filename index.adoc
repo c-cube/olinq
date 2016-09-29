@@ -6,4 +6,5 @@ Documentation:
 
 - link:dev/[dev]
 - link:0.1/[0.1]
+- link:0.2/[0.2]
 
