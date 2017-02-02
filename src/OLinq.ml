@@ -71,6 +71,7 @@ module Iterable = struct
   type 'a t =
     | I_list of 'a list
     | I_vec of 'a Vec.t
+    | I_seq of 'a sequence
     | I_set : ('a, unit) M.t -> 'a t
     | I_map : ('a, 'b) M.t -> ('a * 'b) t
     | I_multimap : ('a, 'b list) M.t -> ('a * 'b) t
@@ -82,6 +83,7 @@ module Iterable = struct
     = function
       | I_vec v -> Vec.to_seq v
       | I_list l -> (fun k -> List.iter k l)
+      | I_seq s -> s
       | I_set m -> (fun k -> M.to_seq m (fun (x,()) -> k x))
       | I_map m -> M.to_seq m
       | I_multimap m -> M.to_seq_multimap m
@@ -96,6 +98,7 @@ module Iterable = struct
   let return x = I_list [x]
   let of_list l = I_list l
   let of_vec v = I_vec v
+  let of_seq s = I_seq s
   let of_set m = I_set m
   let of_map m = I_map m
   let of_multimap m = I_multimap m
@@ -110,6 +113,8 @@ module Iterable = struct
     = function
       | I_list [] -> empty
       | I_list (x::_) -> return x
+      | I_seq s ->
+        begin match seq_head s with None -> empty | Some x -> return x end
       | I_vec v -> if Vec.is_empty v then empty else return (Vec.get v 0)
       | I_set m -> M.choose m |> (function None -> empty | Some (x,()) -> return x)
       | I_map m -> M.choose m |> of_opt
@@ -153,9 +158,12 @@ module Iterable = struct
   (* c -> seq -> f -> vec *)
   let vec_seq_ ~f c = to_seq c |> f |> Vec.of_seq |> of_vec
 
-  let map f c = vec_seq_ c ~f:(seq_map ~f)
-  let filter f c = vec_seq_ c ~f:(seq_filter ~f)
-  let filter_map f c = vec_seq_ c ~f:(seq_filter_map ~f)
+  (* c -> seq -> f -> seq *)
+  let seq_seq_ ~f c = to_seq c |> f |> of_seq
+
+  let map f c = seq_seq_ c ~f:(seq_map ~f)
+  let filter f c = seq_seq_ c ~f:(seq_filter ~f)
+  let filter_map f c = seq_seq_ c ~f:(seq_filter_map ~f)
 
   let flat_map f c =
     let v = Vec.create () in
@@ -205,6 +213,7 @@ module Iterable = struct
     = function
       | I_range (i,j) -> abs (i-j)+1
       | I_vec v -> Vec.length v
+      | I_seq seq -> seq_len seq
       | I_list l -> List.length l
       | I_set m -> M.size m
       | I_map m -> M.size m
@@ -438,7 +447,7 @@ let of_list l = OfIterable (Iterable.of_list l)
 
 let of_vec v = OfIterable (Iterable.of_vec v)
 
-let of_seq s = of_vec (Vec.of_seq s)
+let of_seq s = OfIterable (Iterable.of_seq s)
 
 let of_array a = of_vec (Vec.of_array a)
 

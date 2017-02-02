@@ -266,6 +266,11 @@ val count :
   (count () (of_list ['a'; 'b'; 'b'; 'a'; 'c'; 'a']) |> run_list |> lsort)
 *)
 
+(*$= & ~printer:[%show: (int * int) list]
+  [0,3_000_001; 1, 3_000_000; 2, 3_000_000] \
+  (0 -- 9_000_000 |> map (fun i->i mod 3) |> count () |> run_list |> lsort)
+*)
+
 val count_reflect :
   ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
   unit -> ('a, [`Any]) t -> (('a, int) map, [>`One]) t
