@@ -79,13 +79,23 @@ type ('a, 'b) map = ('a, 'b) OLinq_map.t
 (** {2 Main Type} *)
 
 type ('a, +'card) t constraint 'card = [<`One | `AtMostOne | `Any]
-(** Type of a query that returns zero, one or more values of type 'a.
-    The parameter ['card] indicates how many elements are in the collection,
+(** Type of a query that returns zero, one or more values of type ['a].
+    The parameter ['card] indicates how many elements are in the
+    collection,
     with [`Any] indicating the number is unknown, [`AtMostOne] that there
     are 0 or 1 elements and [`One] exactly one.
 
+    To simplify, this is very similar to a type ['a t] that would
+    behave like a collection of ['a]. The ghost parameter ['card]
+    is only useful to restrict the kind of operations one
+    can perform on these collections. For example , a
+    value of type [('a, [`One]) t] contains exactly one
+    element so we can access it safely.
+
     Conceptually, the cardinalities are ordered from most precise (`One)
-    to least precise (`Any):  `One < `AtMostOne < `Any. *)
+    to least precise (`Any):  [`One < `AtMostOne < `Any].
+
+*)
 
 type 'a t_any = ('a, [`Any]) t
 type 'a t_one = ('a, [`One]) t
