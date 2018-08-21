@@ -251,7 +251,7 @@ val group_by : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
     In other words, elements of the collection that have the same
     image by [f] are grouped in the same list. *)
 
-(*$= & ~printer:[%show: (int * int list) list]
+(*$= & ~printer:Q.Print.(list (pair int @@ list int))
   [0, [2; 4; 10; 100]; 1, [3; 7; 11; 19]] \
   (group_by (fun x->x mod 2) (of_list [2;3;4;7;10;11;19;100]) \
    |> run_list |> List.map (fun (x,y) -> x, lsort y) |> lsort)
@@ -271,12 +271,12 @@ val count :
 (** [count c] counts how many times each element of the collection
     occur, and returns pairs of [x, count(x)] *)
 
-(*$= & ~printer:[%show: (char * int) list]
+(*$= & ~printer:Q.Print.(list (pair char int))
   ['a', 3; 'b', 2; 'c', 1] \
   (count () (of_list ['a'; 'b'; 'b'; 'a'; 'c'; 'a']) |> run_list |> lsort)
 *)
 
-(*$= & ~printer:[%show: (int * int) list]
+(*$= & ~printer:Q.Print.(list @@ pair int int)
   [0,3_000_001; 1, 3_000_000; 2, 3_000_000] \
   (0 -- 9_000_000 |> map (fun i->i mod 3) |> count () |> run_list |> lsort)
 *)
@@ -364,7 +364,7 @@ val group_join_reflect : ?cmp:'a ord -> ?eq:'a equal -> ?hash:'a hash ->
     |> lsort
   in
   assert_equal
-    ~printer:[%show: (int * string list) list]
+    ~printer:Q.Print.(list @@ pair int @@ list string)
     [1, ["1"; "one"]; 2, ["two"]; 3, []; 4, []]
     res
 *)

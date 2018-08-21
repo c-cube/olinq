@@ -4,16 +4,14 @@ version: "0.2"
 author: "Simon Cruanes"
 maintainer: "simon.cruanes.2007@m4x.org"
 build: [
-  [ make "build" ]
+  ["dune" "build" "-p" name]
 ]
-install: [
-  [ make "install" ]
-]
-remove: [ "ocamlfind" "remove" "olinq" ]
-build-doc: [ make "doc" ]
+build-doc: [ "dune" "build" "@doc" "-p" name ]
 depends: [
-  "ocamlfind" {build}
-  "ocamlbuild" {build}
+  "dune" {build}
+  "odoc" {doc}
+  "qtest" {test}
+  "qcheck" {test}
   "base-bytes"
 ]
 tags: [ "linq" "query" "join" "group" "collection" ]

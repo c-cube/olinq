@@ -96,7 +96,7 @@ module Row = struct
     Array.init (size a-1)
       (fun j-> if j<i then a.(j) else a.(j+1))
 
-  let remove_index_l l a = assert false (* TODO *)
+  let remove_index_l _l _a = assert false (* TODO *)
 
   let print out a =
     Format.fprintf out "[@[<hv2>%a@]]" (pp_arr_ ~sep:"; " Data.print) a

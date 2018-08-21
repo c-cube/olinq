@@ -155,9 +155,6 @@ module Iterable = struct
       (fun x -> M.Build.add build x ());
     of_set (M.Build.get build)
 
-  (* c -> seq -> f -> vec *)
-  let vec_seq_ ~f c = to_seq c |> f |> Vec.of_seq |> of_vec
-
   (* c -> seq -> f -> seq *)
   let seq_seq_ ~f c = to_seq c |> f |> of_seq
 
