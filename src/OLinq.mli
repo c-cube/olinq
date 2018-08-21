@@ -16,7 +16,6 @@
         of_list [1;2;3]
         |> flat_map (fun x -> (x -- (x+10)))
         |> count ()
-        |> flat_map of_pmap
         |> sort ()
         |> run_list
       );;
