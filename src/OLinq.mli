@@ -47,7 +47,7 @@
 
 *)
 
-type 'a sequence = ('a -> unit) -> unit
+type 'a iter = ('a -> unit) -> unit
 type 'a equal = 'a -> 'a -> bool
 type 'a ord = 'a -> 'a -> int
 type 'a hash = 'a -> int
@@ -122,7 +122,7 @@ val (--) : int -> int -> (int, [`Any]) t
 
 val of_hashtbl : ('a,'b) Hashtbl.t -> ('a * 'b, [`Any]) t
 
-val of_seq : 'a sequence -> ('a, [`Any]) t
+val of_iter : 'a iter -> ('a, [`Any]) t
 (** Query that returns the elements of the given sequence. *)
 
 val of_vec : 'a OLinq_vec.t -> ('a, [`Any]) t
@@ -184,15 +184,20 @@ val choose : ('a, _) t -> ('a, [>`AtMostOne]) t
 val filter_map : ('a -> 'b option) -> ('a, _) t -> ('b, [`Any]) t
 (** Filter and map elements at once *)
 
-val flat_map_seq : ('a -> 'b sequence) -> ('a, _) t -> ('b, [`Any]) t
-(** Same as {!flat_map} but using sequences *)
+val flat_map_seq : ('a -> 'b Seq.t) -> ('a, _) t -> ('b, [`Any]) t
+(** Same as {!flat_map} but using seq *)
+
+val flat_map_iter : ('a -> 'b iter) -> ('a, _) t -> ('b, [`Any]) t
+(** Same as {!flat_map} but using iterators *)
 
 val flat_map_l : ('a -> 'b list) -> ('a, _) t -> ('b, [`Any]) t
 (** map each element to a collection and flatten the result *)
 
 val flatten_list : ('a list, _) t -> ('a, [`Any]) t
 
-val flatten_seq : ('a sequence,_) t -> ('a, [`Any]) t
+val flatten_seq : ('a Seq.t,_) t -> ('a, [`Any]) t
+
+val flatten_iter : ('a iter,_) t -> ('a, [`Any]) t
 
 val flatten_map : (('a, 'b) map, _) t -> ('a * 'b, [`Any]) t
 

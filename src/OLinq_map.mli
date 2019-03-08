@@ -6,7 +6,7 @@
 type 'a equal = 'a -> 'a -> bool
 type 'a ord = 'a -> 'a -> int
 type 'a hash = 'a -> int
-type 'a sequence = ('a -> unit) -> unit
+type 'a iter = ('a -> unit) -> unit
 
 (** {2 Basics} *)
 
@@ -33,9 +33,9 @@ val mem : ('a,_) t -> 'a -> bool
 
 val size : (_,_) t -> int
 
-val to_seq : ('a, 'b) t -> ('a * 'b) sequence
+val to_iter : ('a, 'b) t -> ('a * 'b) iter
 
-val to_seq_multimap : ('a, 'b list) t -> ('a * 'b) sequence
+val to_iter_multimap : ('a, 'b list) t -> ('a * 'b) iter
 
 val to_list : ('a, 'b) t -> ('a * 'b) list
 
@@ -48,8 +48,8 @@ val fold_multimap : ('acc -> 'a -> 'b -> 'acc) -> 'acc ->
   ('a,'b list) t -> 'acc
 (** Fold on the items of the multimap *)
 
-val get_seq : 'a -> ('a, 'b) t -> 'b sequence
-(** Select a key from a map and wrap into sequence *)
+val get_seq : 'a -> ('a, 'b) t -> 'b iter
+(** Select a key from a map and wrap into iter *)
 
 val iter : ('a,'b) t -> ('a -> 'b -> unit) -> unit
 (** View a multimap as a proper collection *)
@@ -96,11 +96,11 @@ end
 
 (** {2 Misc} *)
 
-val of_seq : ?src:'a Build.src -> ('a * 'b) sequence -> ('a, 'b list) t
+val of_iter : ?src:'a Build.src -> ('a * 'b) iter -> ('a, 'b list) t
 
 val of_list : ?src:'a Build.src -> ('a * 'b) list -> ('a, 'b list) t
 
-val count_seq : ?src:'a Build.src -> 'a sequence -> ('a, int) t
+val count_seq : ?src:'a Build.src -> 'a iter -> ('a, int) t
 
 val map : ('b -> 'c) -> ('a, 'b) t -> ('a, 'c) t
 (** Transform values *)
@@ -111,9 +111,9 @@ val reverse : ?src:'b Build.src -> ('a,'b) t -> ('b,'a list) t
 val reverse_multimap : ?src:'b Build.src -> ('a,'b list) t -> ('b,'a list) t
 (** Reverse relation of the multimap *)
 
-val flatten : ('a,'b sequence) t -> ('a*'b) sequence
+val flatten : ('a,'b iter) t -> ('a*'b) iter
 (** View a multimap as a collection of individual key/value pairs *)
 
-val flatten_l : ('a,'b list) t -> ('a * 'b) sequence
+val flatten_l : ('a,'b list) t -> ('a * 'b) iter
 (** View a multimap as a list of individual key/value pairs *)
 

@@ -6,7 +6,7 @@
 type 'a equal = 'a -> 'a -> bool
 type 'a ord = 'a -> 'a -> int
 type 'a hash = 'a -> int
-type 'a sequence = ('a -> unit) -> unit
+type 'a iter = ('a -> unit) -> unit
 
 type ('a, +'b) t = {
   is_empty : unit -> bool;
@@ -29,9 +29,9 @@ let mem m x =
   try ignore (m.get_exn x); true
   with Not_found -> false
 
-let to_seq m yield = m.iter (fun k v -> yield (k,v))
+let to_iter m yield = m.iter (fun k v -> yield (k,v))
 
-let to_seq_multimap m yield =
+let to_iter_multimap m yield =
   m.iter (fun k vs -> List.iter (fun v -> yield (k,v)) vs)
 
 let get_seq key m yield = match get m key with
@@ -154,7 +154,7 @@ module Build = struct
     of_src src
 end
 
-let of_seq ?(src=Build.Default) seq =
+let of_iter ?(src=Build.Default) seq =
   let build = Build.of_src src in
   seq (fun (k,v) -> Build.add_multimap build k v);
   Build.get build
@@ -206,4 +206,4 @@ let reverse_multimap ?(src=Build.Default) m =
 let flatten m yield =
   m.iter (fun k vs -> vs (fun v -> yield (k,v)))
 
-let flatten_l = to_seq_multimap
+let flatten_l = to_iter_multimap

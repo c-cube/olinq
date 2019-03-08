@@ -46,7 +46,7 @@ let enter_list x = L.flat_map_l (function `List l -> l | _ -> []) x
 let enter_assoc x = L.flat_map_l (function `Assoc l -> l | _ -> []) x
 
 let enter_tuple_index x =
-  L.flat_map_seq
+  L.flat_map_iter
     (function
       | `Tuple l -> (fun yield -> List.iteri (fun i x -> yield (i,x)) l)
       | _ -> (fun _ -> ()))

@@ -3,7 +3,7 @@
 
 (** {1 LINQ-like operations on collections} *)
 
-type 'a sequence = ('a -> unit) -> unit
+type 'a iter = ('a -> unit) -> unit
 type 'a equal = 'a -> 'a -> bool
 type 'a ord = 'a -> 'a -> int
 type 'a hash = 'a -> int
@@ -71,22 +71,22 @@ module Iterable = struct
   type 'a t =
     | I_list of 'a list
     | I_vec of 'a Vec.t
-    | I_seq of 'a sequence
+    | I_iter of 'a iter 
     | I_set : ('a, unit) M.t -> 'a t
     | I_map : ('a, 'b) M.t -> ('a * 'b) t
     | I_multimap : ('a, 'b list) M.t -> ('a * 'b) t
     | I_range : int * int -> int t
     | I_string : string -> char t
 
-  let to_seq
-    : type a. a t -> a sequence
+  let to_iter
+    : type a. a t -> a iter
     = function
-      | I_vec v -> Vec.to_seq v
+      | I_vec v -> Vec.to_iter v
       | I_list l -> (fun k -> List.iter k l)
-      | I_seq s -> s
-      | I_set m -> (fun k -> M.to_seq m (fun (x,()) -> k x))
-      | I_map m -> M.to_seq m
-      | I_multimap m -> M.to_seq_multimap m
+      | I_iter s -> s
+      | I_set m -> (fun k -> M.to_iter m (fun (x,()) -> k x))
+      | I_map m -> M.to_iter m
+      | I_multimap m -> M.to_iter_multimap m
       | I_range (i,j) ->
           (fun yield ->
              if i<=j then for k = i to j do yield k done
@@ -98,7 +98,7 @@ module Iterable = struct
   let return x = I_list [x]
   let of_list l = I_list l
   let of_vec v = I_vec v
-  let of_seq s = I_seq s
+  let of_iter s = I_iter s
   let of_set m = I_set m
   let of_map m = I_map m
   let of_multimap m = I_multimap m
@@ -113,7 +113,7 @@ module Iterable = struct
     = function
       | I_list [] -> empty
       | I_list (x::_) -> return x
-      | I_seq s ->
+      | I_iter s ->
         begin match seq_head s with None -> empty | Some x -> return x end
       | I_vec v -> if Vec.is_empty v then empty else return (Vec.get v 0)
       | I_set m -> M.choose m |> (function None -> empty | Some (x,()) -> return x)
@@ -132,14 +132,14 @@ module Iterable = struct
     : type a. a t -> a Vec.t
     = function
       | I_vec v -> v
-      | i -> Vec.of_seq (to_seq i)
+      | i -> Vec.of_iter (to_iter i)
 
   let to_list
     : type a. a t -> a list
     = function
       | I_list l -> l
       | I_vec v -> Vec.to_list v
-      | i -> to_seq i |> seq_fold (fun l x -> x::l) [] |> List.rev
+      | i -> to_iter i |> seq_fold (fun l x -> x::l) [] |> List.rev
 
   let mem
     : type a. eq:(a -> a -> bool) -> a t -> a -> bool
@@ -147,16 +147,16 @@ module Iterable = struct
     | I_range (i,j) when i<=j -> i <= x && x <= j
     | I_range (i,j) -> j <= x && x <= i
     | I_list l -> List.exists (eq x) l
-    | _ -> to_seq c |> seq_exists (eq x)
+    | _ -> to_iter c |> seq_exists (eq x)
 
   let distinct ~cmp i =
     let build = M.Build.of_cmp ~cmp () in
-    to_seq i
+    to_iter i
       (fun x -> M.Build.add build x ());
     of_set (M.Build.get build)
 
   (* c -> seq -> f -> seq *)
-  let seq_seq_ ~f c = to_seq c |> f |> of_seq
+  let seq_seq_ ~f c = to_iter c |> f |> of_iter
 
   let map f c = seq_seq_ c ~f:(seq_map ~f)
   let filter f c = seq_seq_ c ~f:(seq_filter ~f)
@@ -164,10 +164,16 @@ module Iterable = struct
 
   let flat_map f c =
     let v = Vec.create () in
-    to_seq c (fun x -> Vec.append_seq v (f x));
+    to_iter c (fun x -> Vec.append_iter v (f x));
     of_vec v
 
-  let fold f acc i = to_seq i |> seq_fold f acc
+  (* TODO: add [to_seq] and use it *)
+  let flat_map_seq f c =
+    let v = Vec.create () in
+    to_iter c (fun x -> Vec.append_seq v (f x));
+    of_vec v
+
+  let fold f acc i = to_iter i |> seq_fold f acc
 
   let head
     : type a. a t -> a option
@@ -176,7 +182,7 @@ module Iterable = struct
     | I_list [] -> None
     | I_list (x::_) -> Some x
     | I_vec v -> if Vec.is_empty v then None else Some (Vec.get v 0)
-    | i -> to_seq i |> seq_head
+    | i -> to_iter i |> seq_head
 
   let take
     : type a. int -> a t -> a t
@@ -188,7 +194,7 @@ module Iterable = struct
       let v = Vec.create () in
       let i = ref n in
       begin
-        try to_seq c (fun x -> if !i=0 then raise IExit; decr i; Vec.push v x)
+        try to_iter c (fun x -> if !i=0 then raise IExit; decr i; Vec.push v x)
         with IExit -> ()
       end;
       of_vec v
@@ -196,7 +202,7 @@ module Iterable = struct
   let take_while p c =
     let v = Vec.create () in
     begin
-      try to_seq c (fun x -> if not (p x) then raise IExit; Vec.push v x)
+      try to_iter c (fun x -> if not (p x) then raise IExit; Vec.push v x)
       with IExit -> ()
     end;
     of_vec v
@@ -210,17 +216,17 @@ module Iterable = struct
     = function
       | I_range (i,j) -> abs (i-j)+1
       | I_vec v -> Vec.length v
-      | I_seq seq -> seq_len seq
+      | I_iter seq -> seq_len seq
       | I_list l -> List.length l
       | I_set m -> M.size m
       | I_map m -> M.size m
-      | I_multimap _ as i -> to_seq i |> seq_len
+      | I_multimap _ as i -> to_iter i |> seq_len
       | I_string s -> String.length s
 
   let search obj i =
     let r = ref None in
     try
-      to_seq i
+      to_iter i
         (fun x -> match obj.search_check x with
            | SearchContinue -> ()
            | SearchStop y -> r := Some y; raise IExit);
@@ -232,12 +238,12 @@ module Iterable = struct
 
   let do_join ~join c1 c2 =
     let build1 =
-      to_seq c1
+      to_iter c1
       |> seq_map ~f:(fun x -> join.join_key1 x, x)
-      |> M.of_seq ~src:join.join_build_src
+      |> M.of_iter ~src:join.join_build_src
     in
     let v = Vec.create () in
-    to_seq c2
+    to_iter c2
       (fun y ->
          let key = join.join_key2 y in
          match M.get build1 key with
@@ -259,19 +265,19 @@ module Iterable = struct
   let do_outer_join ~ojoin c1 c2 =
     let build = M.Build.of_src ojoin.ojoin_build_src in
     (* build the map [key -> cell] *)
-    to_seq c1
+    to_iter c1
       (fun x ->
          let k = ojoin.ojoin_key1 x in
          M.Build.update build k ~or_:{ojoin_left=[x]; ojoin_right=[]}
            ~f:(fun c -> {c with ojoin_left =x::c.ojoin_left }));
-    to_seq c2
+    to_iter c2
       (fun x ->
          let k = ojoin.ojoin_key2 x in
          M.Build.update build k ~or_:{ojoin_left=[]; ojoin_right=[x]}
            ~f:(fun c -> {c with ojoin_right=x::c.ojoin_right}));
     let m = M.Build.get build in
     let v = Vec.create () in
-    M.to_seq m
+    M.to_iter m
       (fun (k,cell) ->
          match ojoin.ojoin_merge k cell.ojoin_left cell.ojoin_right with
            | None -> ()
@@ -280,8 +286,8 @@ module Iterable = struct
 
   let do_group_join ~gjoin c1 c2 =
     let build = M.Build.of_src gjoin.gjoin_build_src in
-    to_seq c1 (fun x -> M.Build.add build x []);
-    to_seq c2
+    to_iter c1 (fun x -> M.Build.add build x []);
+    to_iter c2
       (fun y ->
          (* project [y] into some element of [c1] *)
          let x = gjoin.gjoin_proj y in
@@ -290,7 +296,7 @@ module Iterable = struct
 
   let do_group_by ~src f c =
     let m = M.Build.of_src src in
-    to_seq c
+    to_iter c
       (fun x ->
          let key = f x in
          M.Build.add_multimap m key x);
@@ -298,31 +304,31 @@ module Iterable = struct
 
   let do_count ~src c =
     let m = M.Build.of_src src in
-    to_seq c
+    to_iter c
       (fun x -> M.Build.add_count m x);
     M.Build.get m
 
   let product a b =
     let v = Vec.create () in
-    to_seq a
-      (fun x -> to_seq b (fun y -> Vec.push v (x,y)));
+    to_iter a
+      (fun x -> to_iter b (fun y -> Vec.push v (x,y)));
     of_vec v
 
   let append a b =
     let v = to_vec a in
-    to_seq b (Vec.push v);
+    to_iter b (Vec.push v);
     of_vec v
 
   let app a b =
     let v = Vec.create () in
-    to_seq a
-      (fun f -> to_seq b (fun x -> Vec.push v (f x )));
+    to_iter a
+      (fun f -> to_iter b (fun x -> Vec.push v (f x )));
     of_vec v
 
   let do_union ~src c1 c2 =
     let build = M.Build.of_src src  in
-    to_seq c1 (fun x -> M.Build.add build x ());
-    to_seq c2 (fun x -> M.Build.add build x ());
+    to_iter c1 (fun x -> M.Build.add build x ());
+    to_iter c2 (fun x -> M.Build.add build x ());
     let m = M.Build.get build in
     of_set m
 
@@ -333,8 +339,8 @@ module Iterable = struct
   let do_inter ~src c1 c2 =
     let build = M.Build.of_src src in
     let v = Vec.create() in
-    to_seq c1 (fun x -> M.Build.add build x InterLeft);
-    to_seq c2
+    to_iter c1 (fun x -> M.Build.add build x InterLeft);
+    to_iter c2
       (fun x ->
         M.Build.update build x
           ~or_:InterDone
@@ -346,21 +352,21 @@ module Iterable = struct
 
   let do_diff ~src c1 c2 =
     let build = M.Build.of_src src in
-    to_seq c2 (fun x -> M.Build.add build x ());
+    to_iter c2 (fun x -> M.Build.add build x ());
     let map = M.Build.get build in
     (* output elements of [c1] not in [map] *)
-    to_seq c1
+    to_iter c1
       |> seq_filter ~f:(fun x -> not (M.mem map x))
-      |> Vec.of_seq
+      |> Vec.of_iter
       |> of_vec
 
   let do_subset ~src c1 c2 =
     let build = M.Build.of_src src in
-    to_seq c2 (fun x -> M.Build.add build x ());
+    to_iter c2 (fun x -> M.Build.add build x ());
     let map = M.Build.get build in
     let res =
       try
-        to_seq c1 (fun x -> if not (M.mem map x) then raise IExit);
+        to_iter c1 (fun x -> if not (M.mem map x) then raise IExit);
         true
       with IExit -> false
     in
@@ -376,7 +382,8 @@ type (_, _) unary =
   | Size : ('a, int) unary
   | Choose : ('a, 'a) unary
   | FilterMap : ('a -> 'b option) -> ('a, 'b) unary
-  | FlatMap : ('a -> 'b sequence) -> ('a, 'b) unary
+  | FlatMapSeq : ('a -> 'b Seq.t) -> ('a, 'b) unary
+  | FlatMap : ('a -> 'b iter) -> ('a, 'b) unary
   | Take : int -> ('a, 'a) unary
   | TakeWhile : ('a -> bool) -> ('a, 'a) unary
   | Sort : 'a ord -> ('a, 'a) unary
@@ -444,7 +451,7 @@ let of_list l = OfIterable (Iterable.of_list l)
 
 let of_vec v = OfIterable (Iterable.of_vec v)
 
-let of_seq s = OfIterable (Iterable.of_seq s)
+let of_iter s = OfIterable (Iterable.of_iter s)
 
 let of_array a = of_vec (Vec.of_array a)
 
@@ -453,7 +460,7 @@ let of_array_i a =
   of_vec v
 
 let of_hashtbl h =
-  let m = M.of_seq (fun yield -> Hashtbl.iter (fun k v -> yield (k,v)) h) in
+  let m = M.of_iter (fun yield -> Hashtbl.iter (fun k v -> yield (k,v)) h) in
   OfIterable (Iterable.of_multimap m)
 
 let range i j =
@@ -461,11 +468,11 @@ let range i j =
 
 let (--) = range
 
-let of_seq seq = of_seq seq
+let of_iter seq = of_iter seq
 
-let of_queue q = of_seq (fun yield -> Queue.iter yield q)
+let of_queue q = of_iter (fun yield -> Queue.iter yield q)
 
-let of_stack s = of_seq (fun yield -> Stack.iter yield s)
+let of_stack s = of_iter (fun yield -> Stack.iter yield s)
 
 let of_string s = OfIterable (Iterable.of_string s)
 
@@ -484,6 +491,7 @@ let do_unary : type a b. (a,b) unary -> a Iterable.t -> b Iterable.t
     | Size -> Iterable.return (Iterable.length c)
     | Choose -> Iterable.choose c
     | FilterMap f -> Iterable.filter_map f c
+    | FlatMapSeq f -> Iterable.flat_map_seq f c
     | FlatMap f -> Iterable.flat_map f c
     | Take n -> Iterable.take n c
     | TakeWhile p -> Iterable.take_while p c
@@ -525,7 +533,7 @@ let rec run_ : type a. a t_ -> a Iterable.t
         Iterable.flat_map
           (fun x ->
              let q'' = f x in
-             run_ q'' |> Iterable.to_seq)
+             run_ q'' |> Iterable.to_iter)
           i
     | Reflect_vec q ->
         Iterable.return (run_ q |> Iterable.to_vec)
@@ -589,19 +597,21 @@ let rec filter
   | Binary (Append, q1, q2) -> Binary (Append, filter p q1, filter p q2)
   | _ -> Unary (Filter p, q)
 
-let flat_map_seq f q = Unary (FlatMap f, q)
+let flat_map_seq f q = Unary (FlatMapSeq f, q)
+let flat_map_iter f q = Unary (FlatMap f, q)
 
 let flat_map_l f q =
   let f' x = seq_of_list (f x) in
-  flat_map_seq f' q
+  flat_map_iter f' q
 
 let flatten_seq q = flat_map_seq id_ q
+let flatten_iter q = flat_map_iter id_ q
 
-let flatten_list q = flat_map_seq seq_of_list q
+let flatten_list q = flat_map_iter seq_of_list q
 
-let flatten_map q = flat_map_seq M.to_seq q
+let flatten_map q = flat_map_iter M.to_iter q
 
-let flatten_multimap q = flat_map_seq M.to_seq_multimap q
+let flatten_multimap q = flat_map_iter M.to_iter_multimap q
 
 let rec take
 : type a. int -> a t_ -> a t_
@@ -837,7 +847,7 @@ let reflect_list q = Reflect_list q
 let reflect_hashtbl q =
   let vec_to_tbl v =
     let h = Hashtbl.create (Pervasives.min 16 (Vec.length v)) in
-    Vec.to_seq v (fun (k,v) -> Hashtbl.add h k v);
+    Vec.to_iter v (fun (k,v) -> Hashtbl.add h k v);
     h
   in
   map vec_to_tbl (reflect_vec q)
@@ -845,7 +855,7 @@ let reflect_hashtbl q =
 let reflect_queue q =
   let vec_to_q v =
     let q = Queue.create () in
-    Vec.to_seq v (fun x -> Queue.push x q);
+    Vec.to_iter v (fun x -> Queue.push x q);
     q
   in
   map vec_to_q (reflect_vec q)
@@ -853,13 +863,13 @@ let reflect_queue q =
 let reflect_stack q =
   let vec_to_s v =
     let s = Stack.create () in
-    Vec.to_seq v (fun x -> Stack.push x s);
+    Vec.to_iter v (fun x -> Stack.push x s);
     s
   in
   map vec_to_s (reflect_vec q)
 
 module AdaptSet(S : Set.S) = struct
-  let of_set set = of_seq (fun k -> S.iter k set)
+  let of_set set = of_iter (fun k -> S.iter k set)
 
   let reflect q =
     let f c = Vec.fold (fun set x -> S.add x set) S.empty c in
@@ -869,9 +879,9 @@ module AdaptSet(S : Set.S) = struct
 end
 
 module AdaptMap(M : Map.S) = struct
-  let _to_seq m k = M.iter (fun x y -> k (x,y)) m
+  let _to_iter m k = M.iter (fun x y -> k (x,y)) m
 
-  let of_map map = of_seq (_to_seq map)
+  let of_map map = of_iter (_to_iter map)
 
   let reflect q =
     let f c =
@@ -942,7 +952,7 @@ module IO = struct
   let lines q =
     (* sequence of lines *)
     let f s = _lines s 0 in
-    flat_map_seq f q
+    flat_map_iter f q
 
   let lines_l q =
     let f s = lazy (seq_to_list (_lines s 0)) in
@@ -970,7 +980,7 @@ module IO = struct
 
   let out_lines oc q =
     let i = run q in
-    Iterable.to_seq i (fun l -> output_string oc l; output_char oc '\n')
+    Iterable.to_iter i (fun l -> output_string oc l; output_char oc '\n')
 
   let to_file_exn filename q =
     with_out filename (fun oc -> out oc q)

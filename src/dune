@@ -3,5 +3,5 @@
   (name olinq)
   (public_name olinq)
   (wrapped false)
-  (libraries bytes)
+  (libraries bytes seq)
   (flags :standard -safe-string -short-paths))

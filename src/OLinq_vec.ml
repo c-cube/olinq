@@ -3,7 +3,7 @@
 
 (** {1 Resizable array} *)
 
-type 'a sequence = ('a -> unit) -> unit
+type 'a iter = ('a -> unit) -> unit
 
 type 'a t = {
   mutable size : int;
@@ -62,7 +62,8 @@ let iteri ~f v =
     f i (Array.unsafe_get v.vec i)
   done
 
-let append_seq a seq = seq (fun x -> push a x)
+let append_iter a seq = seq (fun x -> push a x)
+let append_seq a seq = Seq.iter (fun x -> push a x) seq
 
 let map f v =
   if Array.length v.vec = 0
@@ -72,7 +73,7 @@ let map f v =
     { size=v.size; vec; }
   )
 
-let to_seq v k =
+let to_iter v k =
   for i = 0 to v.size -1 do
     k (Array.unsafe_get v.vec i)
   done
@@ -85,12 +86,12 @@ let fold f acc v =
       fold (f acc x) (i+1)
   in fold acc 0
 
-let flat_map_seq f v =
+let flat_map_iter f v =
   let v' = create () in
-  to_seq v
+  to_iter v
     (fun x ->
-      let seq = f x in
-      append_seq v' seq);
+      let iter = f x in
+      append_iter v' iter);
   v'
 
 let of_list l =
@@ -100,9 +101,9 @@ let of_list l =
 
 let of_array a = { vec=a; size=Array.length a }
 
-let of_seq seq =
+let of_iter iter =
   let v = create() in
-  append_seq v seq;
+  append_iter v iter;
   v
 
 let to_list v = List.rev (fold (fun l x -> x::l) [] v)

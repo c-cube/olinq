@@ -13,6 +13,7 @@ depends: [
   "qtest" {test}
   "qcheck" {test}
   "base-bytes"
+  "seq"
 ]
 tags: [ "linq" "query" "join" "group" "collection" ]
 homepage: "https://github.com/c-cube/olinq/"
