@@ -140,7 +140,7 @@ val of_map : ('a, 'b) map -> ('a * 'b, [`Any]) t
 val of_multimap : ('a, 'b list) map -> ('a * 'b, [`Any]) t
 (** [of_multimap m] yields each single binding of [m] *)
 
-(** {6 Execution} *)
+(** {4 Execution} *)
 
 val run : ?limit:int -> ('a, _) t -> 'a Iterable.t
 (** Execute the query, possibly returning an error if things go wrong
@@ -162,7 +162,7 @@ val run1_exn : ('a, _) t -> 'a
 (** unsafe shortcut for {!run_head}.
     @raise Not_found if the query contains 0 element *)
 
-(** {6 Basics} *)
+(** {4 Basics} *)
 
 val map : ('a -> 'b) -> ('a, 'card) t -> ('b, 'card) t
 (** Map each value *)
@@ -246,7 +246,7 @@ val distinct : ?cmp:'a ord -> unit -> ('a, [`Any]) t -> ('a, [`Any]) t
 (** Remove duplicate elements from the input collection.
     All elements in the result are distinct. *)
 
-(** {6 Aggregation} *)
+(** {4 Aggregation} *)
 
 val group_by : ?cmp:'b ord -> ?eq:'b equal -> ?hash:'b hash ->
   ('a -> 'b) -> ('a, [`Any]) t -> ('b * 'a list, [`Any]) t
@@ -316,7 +316,7 @@ val exists : ('a -> bool) -> ('a, _) t -> (bool, [>`One]) t
 val find : ('a -> bool) -> ('a, _) t -> ('a option, [>`One]) t
 val find_map : ('a -> 'b option) -> ('a, _) t -> ('b option, [>`One]) t
 
-(** {6 Binary Operators} *)
+(** {4 Binary Operators} *)
 
 val join : ?cmp:'key ord -> ?eq:'key equal -> ?hash:'key hash ->
   ('a -> 'key) -> ('b -> 'key) ->
@@ -419,7 +419,7 @@ val subset :
   not (subset (1 -- 4) (2 -- 10) |> run1)
 *)
 
-(** {6 Tuple and Options} *)
+(** {4 Tuple and Options} *)
 
 (** Specialized projection operators *)
 
@@ -430,7 +430,7 @@ val map_snd : ('a -> 'b) -> ('c * 'a, 'card) t -> ('c * 'b, 'card) t
 val flatten_opt : ('a option, _) t -> ('a, [`Any]) t
 (** Flatten the collection by removing [None] and mapping [Some x] to [x]. *)
 
-(** {6 Applicative} *)
+(** {4 Applicative} *)
 
 val pure : 'a -> ('a, _) t
 (** Synonym to {!return} *)
@@ -442,7 +442,7 @@ val app : ('a -> 'b, 'card) t -> ('a, 'card) t -> ('b, 'card) t
 val (<*>) : ('a -> 'b, 'card) t -> ('a, 'card) t -> ('b, 'card) t
 (** Infix synonym to {!app} *)
 
-(** {6 Monad}
+(** {4 Monad}
 
     Careful, those operators do not allow any optimization before running the
     query, they might therefore be pretty slow. *)
@@ -453,7 +453,7 @@ val flat_map : ('a -> ('b, _) t) -> ('a,_) t -> ('b, [`Any]) t
 val (>>=) : ('a, _) t -> ('a -> ('b, _) t) -> ('b, [`Any]) t
 (** Infix version of {!flat_map} *)
 
-(** {6 Misc} *)
+(** {4 Misc} *)
 
 val lazy_ : ('a lazy_t, 'card) t -> ('a, 'card) t
 
@@ -468,7 +468,7 @@ val opt_unwrap_exn : ('a option, 'card) t -> ('a, 'card) t
    with UnwrapNone -> true)
 *)
 
-(** {6 Infix} *)
+(** {4 Infix} *)
 
 module Infix : sig
   val (--) : int -> int -> (int, [`Any]) t
@@ -477,7 +477,7 @@ module Infix : sig
   val (>>=) : ('a, _) t -> ('a -> ('b, _) t) -> ('b, [`Any]) t
 end
 
-(** {6 Adapters} *)
+(** {4 Adapters} *)
 
 val reflect_vec : ('a, _) t -> ('a OLinq_vec.t, [>`One]) t
 (** [reflect_seq q] evaluates all values in [q] and returns a sequence
@@ -537,7 +537,7 @@ module IO : sig
   val out_lines : out_channel -> (string, _) t -> unit
   (** Evaluate the query and print it line by line on the output *)
 
-  (** {8 Run methods} *)
+  (** {4 Run methods} *)
 
   val to_file : string -> (string, _) t -> unit or_error
   val to_file_exn : string -> (string, _) t -> unit

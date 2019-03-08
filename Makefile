@@ -2,16 +2,16 @@
 all: build test
 
 build:
-	dune build @install
+	@dune build @install
 
 clean:
-	dune clean
+	@dune clean
 
 test:
-	dune runtest --force --no-buffer
+	@dune runtest --force --no-buffer
 
 doc:
-	dune build doc
+	@dune build @doc
 
 VERSION ?= dev
 
