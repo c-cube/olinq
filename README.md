@@ -1,5 +1,7 @@
 # OLinq
 
+[![build status](https://travis-ci.org/c-cube/olinq.svg?branch=master "build status")](https://travis-ci.org/c-cube/olinq)
+
 The purpose is to provide powerful combinators to express iteration,
 transformation and combination of collections of items living in
 the type `'a t`. Inspired

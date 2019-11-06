@@ -13,7 +13,7 @@ depends: [
   "dune" {build}
   "base-bytes"
   "seq"
-  "ocaml" { >= "4.02" }
+  "ocaml" { >= "4.03" }
   "odoc" {with-doc}
   "qtest" {with-test}
   "qcheck" {with-test}
