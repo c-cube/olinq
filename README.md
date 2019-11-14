@@ -8,9 +8,9 @@ the type `'a t`. Inspired
 from https://en.wikipedia.org/wiki/Language_Integrated_Query .
 
 documentation (start with module `OLinq`):
-- [dev version](http://c-cube.github.io/olinq/dev)
-- [0.1](http://c-cube.github.io/olinq/0.1)
+- [0.3](http://c-cube.github.io/olinq/0.3)
 - [0.2](http://c-cube.github.io/olinq/0.2)
+- [0.1](http://c-cube.github.io/olinq/0.1)
 
 ## License
 
