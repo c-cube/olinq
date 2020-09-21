@@ -4,4 +4,5 @@
   (public_name olinq)
   (wrapped false)
   (libraries bytes seq)
-  (flags :standard -safe-string -short-paths))
+  (inline_tests (backend qtest.lib))
+  (flags :standard -safe-string -short-paths -warn-error -a+8))
